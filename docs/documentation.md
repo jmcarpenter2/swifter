@@ -1,9 +1,9 @@
 # Documentation
 
-## 1. `swift_apply`
+## 1. `swiftapply`
 
 ```python
-def swift_apply(df, myfunc, *args, **kwargs, npartitions=cpu_count()*2, dask_threshold=1)
+def swiftapply(df, myfunc, *args, **kwargs, npartitions=cpu_count()*2, dask_threshold=1)
 ```
 
 Efficiently apply any function to a pandas dataframe or series in the fastest available manner
