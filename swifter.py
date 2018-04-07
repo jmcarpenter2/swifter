@@ -24,6 +24,19 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
 
     
 def swiftapply(df, myfunc, *args, **kwargs):
+    """
+    Efficiently apply any function to a pandas dataframe or series
+    in the fastest available manner
+    :param df: The dataframe or series to apply the function to
+    :param myfunc: The function you wish to apply
+    :param args: The positional arguments of the function
+    :param kwargs: The key word arguments of the function
+        You can also specify npartitions and dask_threshold
+        npartitions will affect the speed of dask multiprocessing
+        dask_threshold is the maximum allowed time (in seconds) for a normal pandas apply
+            before switching to a dask operation
+    :return: The new dataframe/series with the function applied as quickly as possible
+    """
     if 'npartitions' in kwargs.keys():
         npartitions = kwargs.pop('npartitions')
     else:
