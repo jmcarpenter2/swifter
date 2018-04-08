@@ -1,5 +1,5 @@
 import pandas as pd
-from multiprocessing import cpu_count
+from psutil import cpu_count
 from dask import dataframe as dd
 from dask.multiprocessing import get
 from numba import jit
