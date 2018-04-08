@@ -14,7 +14,7 @@ from swifter import swiftapply
 
 ## Easy to use
 ```
-myDF['outCol'] = swiftapply(myDF['inCol'], my_func, my_func_arg=my_func_argval)
+myDF['outCol'] = swiftapply(myDF['inCol'], my_func, my_func_positional_arg, my_func_keyword_arg=my_func_keyword_argval)
 ```
 
 ## Notes
