@@ -20,8 +20,10 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
         return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, axis=1, **kwargs, meta=meta).compute(get=get)
     else:
         meta = kwargs.pop('meta')
-        return dd.from_pandas(df, npartitions=npartitions).map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
-
+        try:
+            return dd.from_pandas(df, npartitions=npartitions).map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
+        except:
+            return dd.from_pandas(df, npartitions=npartitions).map(lambda x: myfunc(x), *args, **kwargs, meta=meta).compute(get=get)
     
 def swiftapply(df, myfunc, *args, **kwargs):
     """
@@ -61,13 +63,11 @@ def swiftapply(df, myfunc, *args, **kwargs):
 
                 wrapped = pd_apply(samp, myfunc, *args, **kwargs)
                 n_repeats = 3
-
                 timed = timeit.timeit(wrapped, number=n_repeats)
                 samp_proc_est = timed/n_repeats
                 est_apply_duration = samp_proc_est / len(samp) * df.shape[0]
 
-
-                kwargs['meta'] = myfunc(df.iloc[0], *args, **kwargs)
+                kwargs['meta'] = df.iloc[:1].apply(myfunc, *args, **kwargs)
                 if (est_apply_duration > dask_threshold): 
                     try:
                         mynumbafunc = jit(myfunc)
