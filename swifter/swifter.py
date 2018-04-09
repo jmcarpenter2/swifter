@@ -55,7 +55,7 @@ def swiftapply(df, myfunc, *args, **kwargs):
                 return myfunc(df, *args, **kwargs)
             except: 
                 try:
-                    samp = df.sample(n=1000)
+                    samp = df.iloc[:1000]
                 except:
                     samp = df.sample(frac=0.1)
 
