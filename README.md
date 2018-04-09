@@ -22,7 +22,7 @@ myDF['outCol'] = swiftapply(myDF['inCol'], my_func, positional_arg, keyword_arg=
 ![Alt text](/assets/vectorizes_when_possible_real.png?raw=true)
 ![Alt text](/assets/vectorizes_when_possible_log10.png?raw=true)
 
-## When vectorization is not possible, automatically decides which is faster: to use dask multiprocessing or a simple pandas apply
+## When vectorization is not possible, automatically decides which is faster: to use dask parallel processing or a simple pandas apply
 ![Alt text](/assets/multiprocessing_v_single_real.png?raw=true)
 ![Alt text](/assets/multiprocessing_v_single_log10.png?raw=true)
 
