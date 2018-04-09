@@ -14,8 +14,17 @@ from swifter import swiftapply
 
 ## Easy to use
 ```
-myDF['outCol'] = swiftapply(myDF['inCol'], my_func, my_func_positional_arg, my_func_keyword_arg=my_func_keyword_argval)
+myDF['outCol'] = swiftapply(myDF['inCol'], my_func)
+myDF['outCol'] = swiftapply(myDF['inCol'], my_func, positional_arg, keyword_arg=keyword_argval)
 ```
+
+## Vectorizes your function, when possible
+![Alt text](/assets/vectorizes_when_possible_real.png?raw=true)
+![Alt text](/assets/vectorizes_when_possible_log10.png?raw=true)
+
+## When vectorization is not possible, automatically decides which is faster: to use dask multiprocessing or a simple pandas apply
+![Alt text](/assets/multiprocessing_v_single_real.png?raw=true)
+![Alt text](/assets/multiprocessing_v_single_log10.png?raw=true)
 
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
