@@ -18,6 +18,8 @@ myDF['outCol'] = swiftapply(myDF['inCol'], my_func)
 myDF['outCol'] = swiftapply(myDF['inCol'], my_func, positional_arg, keyword_arg=keyword_argval)
 ```
 
+Check out the [examples notebook](examples/swiftapply_examples.ipynb), along with the [speed benchmark notebook](examples/swiftapply_speedcomparison.ipynb)
+
 ## Vectorizes your function, when possible
 ![Alt text](/assets/vectorizes_when_possible_real.png?raw=true)
 ![Alt text](/assets/vectorizes_when_possible_log10.png?raw=true)
