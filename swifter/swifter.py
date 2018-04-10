@@ -22,7 +22,7 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
         try:
             return dd.from_pandas(df, npartitions=npartitions).map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
         except:
-            return dd.from_pandas(df, npartitions=npartitions).map(lambda x: myfunc(x), *args, **kwargs, meta=meta).compute(get=get)
+            return dd.from_pandas(df, npartitions=npartitions).map(lambda x: myfunc(x, *args, **kwargs), meta=meta).compute(get=get)
         
     
 def swiftapply(df, myfunc, *args, **kwargs):
