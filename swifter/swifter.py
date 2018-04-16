@@ -7,7 +7,11 @@ import timeit
 
 def pd_apply(df, myfunc, *args, **kwargs):
     def wrapped():
-        df.apply(myfunc, args=args, **kwargs)
+        if type(df) == pd.DataFrame:
+            pd.concat([df[c].apply(myfunc, args=args, **kwargs) 
+                              for c in df.columns], axis=1)
+        else:
+            df.apply(myfunc, args=args, **kwargs)
     return wrapped
 
 
@@ -24,7 +28,7 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
         except:
             return dd.from_pandas(df, npartitions=npartitions).map(lambda x: myfunc(x, *args, **kwargs), meta=meta).compute(get=get)
         
-    
+
 def swiftapply(df, myfunc, *args, **kwargs):
     """
     Efficiently apply any function to a pandas dataframe or series
@@ -50,7 +54,10 @@ def swiftapply(df, myfunc, *args, **kwargs):
     
     if myfunc is not str:
         try:
-            return myfunc(df, *args, **kwargs)
+            if type(df) == pd.DataFrame:
+                return pd.concat([pd.Series(myfunc(df[c], *args, **kwargs), name=c) for c in df.columns], axis=1)
+            else:
+                return myfunc(df, *args, **kwargs)
         except: 
             try:
                 samp = df.iloc[:1000]
@@ -63,11 +70,22 @@ def swiftapply(df, myfunc, *args, **kwargs):
             samp_proc_est = timed/n_repeats
             est_apply_duration = samp_proc_est / len(samp) * df.shape[0]
 
-            kwargs['meta'] = df.iloc[:2].apply(myfunc, *args, **kwargs)
-            if (est_apply_duration > dask_threshold): 
+            if type(df) == pd.DataFrame:
+                kwargs['meta'] = pd.concat([df.loc[:2, c].apply(myfunc, args=args, **kwargs) 
+                                          for c in df.columns], axis=1)
+                str_object = object in kwargs['meta'].dtypes.values
+            else:
+                kwargs['meta'] = df.iloc[:2].apply(myfunc, args=args, **kwargs)
+                str_object = object == kwargs['meta'].dtypes
+                
+            if (est_apply_duration > dask_threshold) and (not str_object): 
                 return dask_apply(df, npartitions, myfunc, *args, **kwargs)
             else:
                 kwargs.pop('meta')
-                return df.apply(myfunc, args=args, **kwargs)
+                if type(df) == pd.DataFrame:
+                    return pd.concat([df[c].apply(myfunc, args=args, **kwargs) 
+                                    for c in df.columns], axis=1)
+                else:
+                    return df.apply(myfunc, args=args, **kwargs)
     else:
         return df.astype(str)
