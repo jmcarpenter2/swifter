@@ -16,10 +16,9 @@ def pd_apply(df, myfunc, *args, **kwargs):
 
 def dask_apply(df, npartitions, myfunc, *args, **kwargs):
     if type(df) == pd.DataFrame:
-        kwargs.pop('meta')
-        tmp = df.iloc[:2,:].apply(myfunc, args=args, **kwargs)
+        tmp = kwargs.pop('meta')
         meta = {c: tmp[c].dtype for c in tmp.columns}
-        return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, axis=1, **kwargs, meta=meta).compute(get=get)
+        return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
     else:
         meta = kwargs.pop('meta')
         try:
