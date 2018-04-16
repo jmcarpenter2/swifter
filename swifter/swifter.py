@@ -8,8 +8,7 @@ import timeit
 def pd_apply(df, myfunc, *args, **kwargs):
     def wrapped():
         if type(df) == pd.DataFrame:
-            pd.concat([df[c].apply(myfunc, args=args, **kwargs) 
-                              for c in df.columns], axis=1)
+            pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
         else:
             df.apply(myfunc, args=args, **kwargs)
     return wrapped
@@ -71,8 +70,7 @@ def swiftapply(df, myfunc, *args, **kwargs):
             est_apply_duration = samp_proc_est / len(samp) * df.shape[0]
 
             if type(df) == pd.DataFrame:
-                kwargs['meta'] = pd.concat([df.loc[:2, c].apply(myfunc, args=args, **kwargs) 
-                                          for c in df.columns], axis=1)
+                kwargs['meta'] = pd.concat([df.loc[:2, c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
                 str_object = object in kwargs['meta'].dtypes.values
             else:
                 kwargs['meta'] = df.iloc[:2].apply(myfunc, args=args, **kwargs)
@@ -83,8 +81,7 @@ def swiftapply(df, myfunc, *args, **kwargs):
             else:
                 kwargs.pop('meta')
                 if type(df) == pd.DataFrame:
-                    return pd.concat([df[c].apply(myfunc, args=args, **kwargs) 
-                                    for c in df.columns], axis=1)
+                    return pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
                 else:
                     return df.apply(myfunc, args=args, **kwargs)
     else:
