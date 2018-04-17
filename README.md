@@ -30,3 +30,5 @@ Check out the [examples notebook](examples/swiftapply_examples.ipynb), along wit
 
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
+
+2. When using swiftapply on a dataframe with a non-vectorized function call, swiftapply will resort to pandas apply because dask applymap does not work properly as of now. Submitting a bug fix shortly.
