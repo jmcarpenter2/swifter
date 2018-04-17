@@ -22,8 +22,8 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
         try:
             return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
         except:
-            warnings.warn('Dask applymap not working correctly. Falling back to pandas apply.')
-            return pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
+            warnings.warn('Dask applymap not working correctly. Concatenating swiftapplies instead.')
+            return pd.concat([swiftapply(df[c], myfunc, *args, **kwargs) for c in df.columns], axis=1)
     else:
         meta = kwargs.pop('meta')
         try:
