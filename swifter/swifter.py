@@ -3,6 +3,7 @@ from psutil import cpu_count
 from dask import dataframe as dd
 from dask.multiprocessing import get
 import timeit
+import warnings
 
 
 def pd_apply(df, myfunc, *args, **kwargs):
@@ -18,7 +19,11 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
     if type(df) == pd.DataFrame:
         tmp = kwargs.pop('meta')
         meta = {c: tmp[c].dtype for c in tmp.columns}
-        return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
+        try:
+            return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
+        except:
+            warnings.warn('Dask applymap not working correctly. Falling back to pandas apply.')
+            return pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
     else:
         meta = kwargs.pop('meta')
         try:
@@ -51,12 +56,12 @@ def swiftapply(df, myfunc, *args, **kwargs):
         dask_threshold = 1
     
     if myfunc is not str:
-        try:
+        try:  # try to vectorize
             if type(df) == pd.DataFrame:
                 return pd.concat([pd.Series(myfunc(df[c], *args, **kwargs), name=c) for c in df.columns], axis=1)
             else:
                 return myfunc(df, *args, **kwargs)
-        except: 
+        except:  # if can't vectorize, estimate time to pandas apply
             try:
                 samp = df.iloc[:1000]
             except:
@@ -68,6 +73,7 @@ def swiftapply(df, myfunc, *args, **kwargs):
             samp_proc_est = timed/n_repeats
             est_apply_duration = samp_proc_est / len(samp) * df.shape[0]
 
+            # Get meta informatino for dask, and check if output is str 
             if type(df) == pd.DataFrame:
                 kwargs['meta'] = pd.concat([df.loc[:2, c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
                 str_object = object in kwargs['meta'].dtypes.values
@@ -75,9 +81,10 @@ def swiftapply(df, myfunc, *args, **kwargs):
                 kwargs['meta'] = df.iloc[:2].apply(myfunc, args=args, **kwargs)
                 str_object = object == kwargs['meta'].dtypes
                 
-            if (est_apply_duration > dask_threshold) and (not str_object): 
+            # if pandas apply takes too long and output is not str, use dask
+            if (est_apply_duration > dask_threshold) and (not str_object):
                 return dask_apply(df, npartitions, myfunc, *args, **kwargs)
-            else:
+            else:  # use pandas
                 kwargs.pop('meta')
                 if type(df) == pd.DataFrame:
                     return pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
