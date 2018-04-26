@@ -83,7 +83,7 @@ def swiftapply(df, myfunc, *args, **kwargs):
                 assert tmp_df.shape == samp.shape
                 return myfunc(df, *args, **kwargs)
 
-        except (AssertionError, AttributeError) as e:  # if can't vectorize, estimate time to pandas apply
+        except (AssertionError, AttributeError, ValueError) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = pd_apply(samp, myfunc, *args, **kwargs)
             n_repeats = 3
             timed = timeit.timeit(wrapped, number=n_repeats)
