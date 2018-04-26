@@ -9,28 +9,41 @@ import warnings
 def pd_apply(df, myfunc, *args, **kwargs):
     def wrapped():
         if type(df) == pd.DataFrame:
-            pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
+            pd.concat([df[c].apply(myfunc, args=args, **kwargs)
+                       for c in df.columns], axis=1)
         else:
             df.apply(myfunc, args=args, **kwargs)
     return wrapped
 
 
 def dask_apply(df, npartitions, myfunc, *args, **kwargs):
+    samp = df.iloc[:npartitions*2]
+
     if type(df) == pd.DataFrame:
         tmp = kwargs.pop('meta')
         meta = {c: tmp[c].dtype for c in tmp.columns}
         try:
-            return dd.from_pandas(df, npartitions=npartitions).apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
-        except:
+            tmp_df = dd.from_pandas(samp, npartitions=npartitions).\
+                apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
+            assert tmp_df.shape == samp.shape
+            return dd.from_pandas(df, npartitions=npartitions).\
+                apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
+        except (AssertionError, AttributeError) as e:
             warnings.warn('Dask applymap not working correctly. Concatenating swiftapplies instead.')
-            return pd.concat([swiftapply(df[c], myfunc, *args, **kwargs) for c in df.columns], axis=1)
+            return pd.concat([swiftapply(df[c], myfunc, *args, **kwargs)
+                              for c in df.columns], axis=1)
     else:
         meta = kwargs.pop('meta')
         try:
-            return dd.from_pandas(df, npartitions=npartitions).map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
-        except:
-            return dd.from_pandas(df, npartitions=npartitions).map(lambda x: myfunc(x, *args, **kwargs), meta=meta).compute(get=get)
-        
+            tmp_df = dd.from_pandas(samp, npartitions=npartitions).\
+                map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
+            assert tmp_df.shape == samp.shape
+            return dd.from_pandas(df, npartitions=npartitions).\
+                map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
+        except (AssertionError, AttributeError) as e:
+            return dd.from_pandas(df, npartitions=npartitions).\
+                map(lambda x: myfunc(x, *args, **kwargs), meta=meta).compute(get=get)
+
 
 def swiftapply(df, myfunc, *args, **kwargs):
     """
@@ -54,40 +67,46 @@ def swiftapply(df, myfunc, *args, **kwargs):
         dask_threshold = kwargs.pop('dask_threshold')
     else:
         dask_threshold = 1
-    
+
     if myfunc is not str:
+        samp = df.iloc[:1000]
+
         try:  # try to vectorize
             if type(df) == pd.DataFrame:
-                return pd.concat([pd.Series(myfunc(df[c], *args, **kwargs), name=c) for c in df.columns], axis=1)
+                tmp_df = pd.concat([pd.Series(myfunc(samp[c], *args, **kwargs), name=c)
+                                    for c in samp.columns], axis=1)
+                assert tmp_df.shape == samp.shape
+                return pd.concat([pd.Series(myfunc(df[c], *args, **kwargs), name=c)
+                                  for c in df.columns], axis=1)
             else:
+                tmp_df = myfunc(samp, *args, **kwargs)
+                assert tmp_df.shape == samp.shape
                 return myfunc(df, *args, **kwargs)
-        except:  # if can't vectorize, estimate time to pandas apply
-            try:
-                samp = df.iloc[:1000]
-            except:
-                samp = df.iloc[:df.shape[0]/10]
 
+        except (AssertionError, AttributeError) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = pd_apply(samp, myfunc, *args, **kwargs)
             n_repeats = 3
             timed = timeit.timeit(wrapped, number=n_repeats)
             samp_proc_est = timed/n_repeats
             est_apply_duration = samp_proc_est / len(samp) * df.shape[0]
 
-            # Get meta informatino for dask, and check if output is str 
+            # Get meta information for dask, and check if output is str
             if type(df) == pd.DataFrame:
-                kwargs['meta'] = pd.concat([df.loc[:2, c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
+                kwargs['meta'] = pd.concat([df.loc[:2, c].apply(myfunc, args=args, **kwargs)
+                                            for c in df.columns], axis=1)
                 str_object = object in kwargs['meta'].dtypes.values
             else:
                 kwargs['meta'] = df.iloc[:2].apply(myfunc, args=args, **kwargs)
                 str_object = object == kwargs['meta'].dtypes
-                
+
             # if pandas apply takes too long and output is not str, use dask
             if (est_apply_duration > dask_threshold) and (not str_object):
                 return dask_apply(df, npartitions, myfunc, *args, **kwargs)
             else:  # use pandas
                 kwargs.pop('meta')
                 if type(df) == pd.DataFrame:
-                    return pd.concat([df[c].apply(myfunc, args=args, **kwargs) for c in df.columns], axis=1)
+                    return pd.concat([df[c].apply(myfunc, args=args, **kwargs)
+                                      for c in df.columns], axis=1)
                 else:
                     return df.apply(myfunc, args=args, **kwargs)
     else:
