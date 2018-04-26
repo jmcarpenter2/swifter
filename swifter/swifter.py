@@ -28,7 +28,7 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
             assert tmp_df.shape == samp.shape
             return dd.from_pandas(df, npartitions=npartitions).\
                 apply(myfunc, *args, **kwargs, axis=1, meta=meta).compute(get=get)
-        except (AssertionError, AttributeError) as e:
+        except (AssertionError, AttributeError, ValueError) as e:
             warnings.warn('Dask applymap not working correctly. Concatenating swiftapplies instead.')
             return pd.concat([swiftapply(df[c], myfunc, *args, **kwargs)
                               for c in df.columns], axis=1)
@@ -40,7 +40,7 @@ def dask_apply(df, npartitions, myfunc, *args, **kwargs):
             assert tmp_df.shape == samp.shape
             return dd.from_pandas(df, npartitions=npartitions).\
                 map_partitions(myfunc, *args, **kwargs, meta=meta).compute(get=get)
-        except (AssertionError, AttributeError) as e:
+        except (AssertionError, AttributeError, ValueError) as e:
             return dd.from_pandas(df, npartitions=npartitions).\
                 map(lambda x: myfunc(x, *args, **kwargs), meta=meta).compute(get=get)
 
