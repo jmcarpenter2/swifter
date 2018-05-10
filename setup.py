@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'swifter',
   packages = ['swifter'], # this must be the same as the name above
-  version = '0.152',
+  version = '0.153',
   description = 'A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner',
   author = 'Jason Carpenter',
   author_email = 'jmcarpenter2@dons.usfca.edu',
