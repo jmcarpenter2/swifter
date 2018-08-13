@@ -7,15 +7,17 @@ $pip install swifter # first time installation
 $pip install -U swifter # upgrade to latest version
 ``` 
 
-and then import into your code using:
+and then import into your code along with pandas using:
 ```
-from swifter import swiftapply
+import pandas as pd
+import swifter
 ```
 
 ## Easy to use
 ```
-myDF['outCol'] = swiftapply(myDF['inCol'], my_func)
-myDF['outCol'] = swiftapply(myDF['inCol'], my_func, positional_arg, keyword_arg=keyword_argval)
+df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': ['a', 'b', 'c', 'd']})
+myDF['outCol'] = myDF['inCol'].swifter.apply(my_func, axis=1)
+myDF['outCol'] = myDF['inCol'].swifter.apply(my_func, axis=1, positional_arg, keyword_arg=keyword_argval)
 ```
 
 Check out the [examples notebook](examples/swiftapply_examples.ipynb), along with the [speed benchmark notebook](examples/swiftapply_speedcomparison.ipynb)
