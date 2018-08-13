@@ -7,7 +7,8 @@ def pandas.Series.swifter.apply(func, convert_dtype=True, args=(), **kwds)
 
 Efficiently apply any function to a pandas series in the fastest available manner
 
-** Parameters:**
+**Parameters:**
+
 `func` : function. Function to apply to each element of the series.
 
 `convert_dtype` : boolean, default True. Try to find better dtype for elementwise function results. If False, leave as dtype=object
@@ -28,7 +29,7 @@ Efficiently apply any function to a pandas dataframe in the fastest available ma
 
 `func` : function. Function to apply to each column or row.
 
-`axis` : {0 or ‘index’, 1 or ‘columns’}, default 0. *For now, dask only supports axis=1, and thus swifter is limited to axis=1*. Axis along which the function is applied:
+`axis` : {0 or ‘index’, 1 or ‘columns’}, default 0. **For now, dask only supports axis=1, and thus swifter is limited to axis=1**. Axis along which the function is applied:
 
 0 or ‘index’: apply function to each column.
 1 or ‘columns’: apply function to each row.
@@ -46,7 +47,7 @@ True : the passed function will receive ndarray objects instead. If you are just
 
 `reduce` : bool or None, default None. Try to apply reduction procedures. If the DataFrame is empty, apply will use reduce to determine whether the result should be a Series or a DataFrame. If reduce=None (the default), apply’s return value will be guessed by calling func on an empty Series (note: while guessing, exceptions raised by func will be ignored). If reduce=True a Series will always be returned, and if reduce=False a DataFrame will always be returned.
 
-Deprecated since version 0.23.0: This argument will be removed in a future version, replaced by result_type='reduce'.
+Deprecated since pandas version 0.23.0: This argument will be removed in a future version, replaced by result_type='reduce'.
 
 `result_type` : {‘expand’, ‘reduce’, ‘broadcast’, None}, default None. These only act when axis=1 (columns):
 
@@ -55,7 +56,7 @@ Deprecated since version 0.23.0: This argument will be removed in a future versi
 ‘broadcast’ : results will be broadcast to the original shape of the DataFrame, the original index and columns will be retained.
 The default behaviour (None) depends on the return value of the applied function: list-like results will be returned as a Series of those. However if the apply function returns a Series these are expanded to columns.
 
-New in version 0.23.0.
+New in pandas version 0.23.0.
 
 `args` : tuple. Positional arguments to pass to func in addition to the array/series.
 
