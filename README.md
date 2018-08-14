@@ -16,11 +16,14 @@ import swifter
 ## Easy to use
 ```
 df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': ['a', 'b', 'a', 'b']})
+
 df['x2'] = df['x'].swifter.apply(lambda x: x**2)
 df['outCol'] = df['inCol'].swifter.apply(my_func)
 df['outCol'] = df['inCol'].swifter.apply(my_func, positional_arg, keyword_arg=keyword_argval)
 
 df_grouped = df.swifter.groupby_apply('y', lambda x: x.mean() - x.min())
+df_grouped = df.swifter.groupby_apply(groupby_col, my_func)
+df-grouped = df.swifter.groupby_apply(groupby_col, my_func, positional_arg, keyword_arg=keyword_argvaL)
 ```
 
 Check out the [examples notebook](examples/swiftapply_examples.ipynb), along with the [speed benchmark notebook](examples/swiftapply_speedcomparison.ipynb)
