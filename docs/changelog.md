@@ -1,7 +1,11 @@
 # Changelog
 
+## Version 0.210
+Fixed a bug for row-wise applies. Thanks to @slhck for poining this out. 
+
 ## Version 0.200
 Completely refactored the package as an extension to pandas, rather than an independent function call. This will allow for increased flexibility of the user and simplicity of using swiftapply.
+**This new update changed the way to use swiftapply. Now the format is df.swifter.apply(foo)**
 
 ## Version  0.150
 Fixed bug that would allow certain functions to be applied to the entire series/dataframe, rather than to each element. For example, len(x) returned the length of the series, rather than the length of each string within the series. A special thanks to @bharatvem for pointing this out.
