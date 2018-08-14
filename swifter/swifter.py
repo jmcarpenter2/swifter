@@ -124,9 +124,8 @@ class DataFrameAccessor():
         return wrapped
 
     def _dask_groupby_apply(self, groupby_col, func, *args, **kwds):
-        samp = self._obj.iloc[:self._obj.npartitions * 2, :]
         tmp = kwds.pop('meta')
-        meta = {c: tmp[c].dtype for c in samp.groupby(groupby_col).apply(func, *args, **kwds).columns}
+        meta = {c: tmp[c].dtype for c in tmp.columns if c is not groupby_col}
         try:
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).set_index(groupby_col).\
                 groupby(groupby_col).apply(func, *args, meta=meta, **kwds).compute(scheduler='processes')
