@@ -124,11 +124,10 @@ class DataFrameAccessor():
         return wrapped
 
     def _dask_groupby_apply(self, groupby_col, func, *args, **kwds):
-        tmp = kwds.pop('meta')
-        meta = {c: tmp[c].dtype for c in tmp.columns}
+        kwds.pop('meta')
         try:
-            return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).groupby(groupby_col).\
-                apply(func, *args, meta=meta, **kwds).compute(scheduler='processes')
+            return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).set_index(groupby_col).\
+                groupby(groupby_col).apply(func, *args, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError) as e:
             print(e)
 
