@@ -25,13 +25,13 @@ class SeriesAccessor():
         meta = kwds.pop('meta')
         try:
             tmp_df = dd.from_pandas(samp, npartitions=self._obj.npartitions). \
-                map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='multiprocessing')
+                map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
             assert tmp_df.shape == samp.shape
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
-                map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='multiprocessing')
+                map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError) as e:
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
-                map(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='multiprocessing')
+                map(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
         samp = self._obj.iloc[:1000]
@@ -49,10 +49,9 @@ class SeriesAccessor():
 
             # Get meta information for dask, and check if output is str
             kwds['meta'] = self._obj.iloc[:2].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
-            str_object = object == kwds['meta'].dtypes
 
             # if pandas apply takes too long and output is not str, use dask
-            if (est_apply_duration > self._obj.dask_threshold) and (not str_object):
+            if (est_apply_duration > self._obj.dask_threshold):
                 return self._dask_apply(func, *args, **kwds)
             else:  # use pandas
                 kwds.pop('meta')
@@ -77,15 +76,15 @@ class DataFrameAccessor():
         return wrapped
 
     def _dask_apply(self, func, axis=0, *args, **kwds):
-        samp = self._obj.iloc[:self._obj.npartitions*2]
+        samp = self._obj.iloc[:self._obj.npartitions*2, :]
         tmp = kwds.pop('meta')
         meta = {c: tmp[c].dtype for c in tmp.columns}
         try:
             tmp_df = dd.from_pandas(samp, npartitions=self._obj.npartitions).\
-                apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='multiprocessing')
+                apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
             assert tmp_df.shape == samp.shape
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).\
-                apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='multiprocessing')
+                apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError) as e:
             warnings.warn('Dask applymap not working correctly. Concatenating swiftapplies instead.')
             return pd.concat([self._obj[c].swifter.apply(func, *args, **kwds)
@@ -110,12 +109,44 @@ class DataFrameAccessor():
             # Get meta information for dask, and check if output is str
             kwds['meta'] = self._obj.iloc[:1000, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                        result_type=result_type, args=args, **kwds)
-            str_object = object in kwds['meta'].dtypes.values
 
             # if pandas apply takes too long and output is not str, use dask
-            if (est_apply_duration > self._obj.dask_threshold) and (not str_object):
+            if (est_apply_duration > self._obj.dask_threshold):
                 return self._dask_apply(func, axis=axis, *args, **kwds)
             else:  # use pandas
                 kwds.pop('meta')
                 return self._obj.apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                        result_type=result_type, args=args, **kwds)
+
+    def _wrapped_groupby_apply(self, groupby_col, func, *args, **kwds):
+        def wrapped():
+            self._obj.iloc[:1000, :].groupby(groupby_col).apply(func, *args, **kwds)
+        return wrapped
+
+    def _dask_groupby_apply(self, groupby_col, func, *args, **kwds):
+        tmp = kwds.pop('meta')
+        meta = {c: tmp[c].dtype for c in tmp.columns}
+        try:
+            return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).groupby(groupby_col).\
+                apply(func, *args, meta=meta, **kwds).compute(scheduler='processes')
+        except (AssertionError, AttributeError, ValueError) as e:
+            print(e)
+
+    def groupby_apply(self, groupby_col, func, *args, **kwds):
+        samp = self._obj.iloc[:1000, :]
+
+        wrapped = self._wrapped_groupby_apply(groupby_col, func, *args, **kwds)
+        n_repeats = 3
+        timed = timeit.timeit(wrapped, number=n_repeats)
+        samp_proc_est = timed / n_repeats
+        est_apply_duration = samp_proc_est / 1000 * self._obj.shape[0]
+
+        # Get meta information for dask, and check if output is str
+        kwds['meta'] = self._obj.iloc[:1000, :].groupby(groupby_col).apply(func, *args, **kwds)
+
+        # if pandas apply takes too long and output is not str, use dask
+        if (est_apply_duration) > self._obj.dask_threshold:
+            return self._dask_groupby_apply(groupby_col, func, *args, **kwds)
+        else: # use pandas
+            kwds.pop('meta')
+            return self._obj.groupby(groupby_col).apply(func, *args, **kwds)
