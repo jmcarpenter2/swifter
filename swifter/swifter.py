@@ -26,7 +26,7 @@ class SeriesAccessor():
         try:
             tmp_df = dd.from_pandas(samp, npartitions=self._obj.npartitions). \
                 map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
-            assert tmp_df.shape == samp.shape
+            assert tmp_df.shape == meta.shape
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
                 map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError) as e:
@@ -34,7 +34,10 @@ class SeriesAccessor():
                 map(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
-        samp = self._obj.iloc[:1000]
+        samp = self._obj.iloc[:self._obj.npartitions*2]
+        if 'axis' in kwds.keys():
+            kwds.pop('axis')
+            warnings.warn('Axis keyword not necessary because applying on a Series.')
 
         try:  # try to vectorize
             tmp_df = func(samp, *args, **kwds)
@@ -78,11 +81,14 @@ class DataFrameAccessor():
     def _dask_apply(self, func, axis=0, *args, **kwds):
         samp = self._obj.iloc[:self._obj.npartitions*2, :]
         tmp = kwds.pop('meta')
-        meta = {c: tmp[c].dtype for c in tmp.columns}
+        if type(tmp) == pd.Series:
+            meta = tmp
+        else:
+            meta = {c: tmp[c].dtype for c in tmp.columns}
         try:
             tmp_df = dd.from_pandas(samp, npartitions=self._obj.npartitions).\
                 apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
-            assert tmp_df.shape == samp.shape
+            assert tmp_df.shape == meta.shape
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).\
                 apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError) as e:
@@ -92,9 +98,11 @@ class DataFrameAccessor():
 
 
     def apply(self, func, axis=1, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
-        samp = self._obj.iloc[:1000, :]
+        samp = self._obj.iloc[:self._obj.npartitions*2, :]
 
         try:  # try to vectorize
+            if 'axis' in kwds.keys():
+                kwds.pop('axis')
             tmp_df = func(samp, *args, **kwds)
             assert tmp_df.shape == samp.shape
             return func(self._obj, *args, **kwds)
@@ -107,7 +115,7 @@ class DataFrameAccessor():
             est_apply_duration = samp_proc_est / 1000 * self._obj.shape[0]
 
             # Get meta information for dask, and check if output is str
-            kwds['meta'] = self._obj.iloc[:1000, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
+            kwds['meta'] = self._obj.iloc[:self._obj.npartitions*2, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                        result_type=result_type, args=args, **kwds)
 
             # if pandas apply takes too long and output is not str, use dask
@@ -133,8 +141,6 @@ class DataFrameAccessor():
             print(e)
 
     def groupby_apply(self, groupby_col, func, *args, **kwds):
-        samp = self._obj.iloc[:1000, :]
-
         wrapped = self._wrapped_groupby_apply(groupby_col, func, *args, **kwds)
         n_repeats = 3
         timed = timeit.timeit(wrapped, number=n_repeats)
@@ -142,7 +148,7 @@ class DataFrameAccessor():
         est_apply_duration = samp_proc_est / 1000 * self._obj.shape[0]
 
         # Get meta information for dask, and check if output is str
-        kwds['meta'] = self._obj.iloc[:1000, :].groupby(groupby_col).apply(func, *args, **kwds)
+        kwds['meta'] = self._obj.iloc[:self._obj.npartitions*2, :].groupby(groupby_col).apply(func, *args, **kwds)
 
         # if pandas apply takes too long and output is not str, use dask
         if (est_apply_duration) > self._obj.dask_threshold:
