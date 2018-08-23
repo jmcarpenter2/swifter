@@ -5,8 +5,10 @@ A package which efficiently applies any function to a pandas dataframe or series
 
 Installation:
 ```
-$pip install swifter # first time installation
-$pip install -U swifter # upgrade to latest version
+$ pip install -U pandas # upgrade pandas
+$ pip install swifter # first time installation
+
+$ pip install -U swifter # upgrade to latest version
 ``` 
 
 and then import into your code along with pandas using:
@@ -41,4 +43,6 @@ Check out the [examples notebook](examples/swiftapply_examples.ipynb), along wit
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
 
-2. When using swiftapply on a dataframe with a non-vectorized function call, swiftapply will resort to concatenating swiftapplies on each column because dask applymap does not work properly as of now. Submitting a bug fix shortly.
+2. Please upgrade your version of pandas, as the pandas extension api used in this module is a recent addition to pandas.
+
+3. When using swiftapply on a dataframe with a non-vectorized function call, swiftapply will resort to concatenating swiftapplies on each column because dask applymap does not work properly as of now. Submitting a bug fix shortly.
