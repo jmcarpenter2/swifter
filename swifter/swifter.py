@@ -29,7 +29,7 @@ class SeriesAccessor():
             assert tmp_df.shape == meta.shape
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
                 map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
-        except (AssertionError, AttributeError, ValueError) as e:
+        except (AssertionError, AttributeError, ValueError, TypeError) as e:
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
                 map(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
 
@@ -43,7 +43,7 @@ class SeriesAccessor():
             tmp_df = func(samp, *args, **kwds)
             assert tmp_df.shape == samp.shape
             return func(self._obj, *args, **kwds)
-        except (AssertionError, AttributeError, ValueError) as e:  # if can't vectorize, estimate time to pandas apply
+        except (AssertionError, AttributeError, ValueError, TypeError) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
             n_repeats = 3
             timed = timeit.timeit(wrapped, number=n_repeats)
@@ -91,7 +91,7 @@ class DataFrameAccessor():
             assert tmp_df.shape == meta.shape
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).\
                 apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
-        except (AssertionError, AttributeError, ValueError) as e:
+        except (AssertionError, AttributeError, ValueError, TypeError) as e:
             warnings.warn('Dask applymap not working correctly. Concatenating swiftapplies instead.')
             return pd.concat([self._obj[c].swifter.apply(func, *args, **kwds)
                               for c in self._obj.columns], axis=1)
@@ -106,7 +106,7 @@ class DataFrameAccessor():
             tmp_df = func(samp, *args, **kwds)
             assert tmp_df.shape == samp.shape
             return func(self._obj, *args, **kwds)
-        except (AssertionError, AttributeError, ValueError) as e:  # if can't vectorize, estimate time to pandas apply
+        except (AssertionError, AttributeError, ValueError, TypeError) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                        result_type=result_type, args=args, **kwds)
             n_repeats = 3
@@ -137,7 +137,7 @@ class DataFrameAccessor():
         try:
             return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).set_index(groupby_col).\
                 groupby(groupby_col).apply(func, *args, meta=meta, **kwds).compute(scheduler='processes')
-        except (AssertionError, AttributeError, ValueError) as e:
+        except (AssertionError, AttributeError, ValueError, TypeError) as e:
             print(e)
 
     def groupby_apply(self, groupby_col, func, *args, **kwds):
