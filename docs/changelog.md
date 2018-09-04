@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.230
+Made a change so that swifter uses pandas apply when input is series/dataframe of dtype string. This is a temporary solution to slow dask apply processing of strings.
+
 ## Version 0.220
 Added a groupby_apply function to utilize dask for groupby apply when its faster. Simply use as **df.swifter.groupby_apply(groupby_col, func)**. I would've extended the Pandas DataFrameGroupBy object, but he hasn't added support for that kind of extension yet. Also, removed the str_object limitation to utilizing dask. Now it will simply determine whether to use dask v pandas based on the dask_threshold (default 1 second).
 
