@@ -19,7 +19,7 @@ import swifter
 
 ## Easy to use
 ```
-df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': 5, 6, 7, 8]})
+df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': [5, 6, 7, 8]})
 
 df['x2'] = df['x'].swifter.apply(lambda x: x**2)
 df['outCol'] = df['inCol'].swifter.apply(my_func)
