@@ -1,7 +1,7 @@
 # swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner
 
-*Current version == 0.230*
+*Current version == 0.240*
 
 Installation:
 ```
@@ -24,10 +24,6 @@ df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': ['a', 'b', 'a', 'b']})
 df['x2'] = df['x'].swifter.apply(lambda x: x**2)
 df['outCol'] = df['inCol'].swifter.apply(my_func)
 df['outCol'] = df['inCol'].swifter.apply(my_func, positional_arg, keyword_arg=keyword_argval)
-
-df_grouped = df.swifter.groupby_apply('y', lambda x: x.mean() - x.min())
-df_grouped = df.swifter.groupby_apply(groupby_col, my_func)
-df-grouped = df.swifter.groupby_apply(groupby_col, my_func, positional_arg, keyword_arg=keyword_argvaL)
 ```
 
 Check out the [examples notebook](examples/swiftapply_examples.ipynb), along with the [speed benchmark notebook](examples/swiftapply_speedcomparison.ipynb)
@@ -44,5 +40,3 @@ Check out the [examples notebook](examples/swiftapply_examples.ipynb), along wit
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
 
 2. Please upgrade your version of pandas, as the pandas extension api used in this module is a recent addition to pandas.
-
-3. When using swiftapply on a dataframe with a non-vectorized function call, swiftapply will resort to concatenating swiftapplies on each column because dask applymap does not work properly as of now. Submitting a bug fix shortly.

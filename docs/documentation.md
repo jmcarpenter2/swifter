@@ -66,29 +66,3 @@ New in pandas version 0.23.0.
 **returns:**
 
 The new dataframe/series with the function applied as quickly as possible
-
-## 2. `pandas.DataFrame.swifter.groupby_apply`
-
-```python
-def pandas.DataFrame.swifter.groupby_apply(groupby_col, func, *args, **kwds)
-```
-
-Efficiently group by the groupby_col and apply any function to a pandas dataframe in the fastest available manner
-
-**Parameters:**
-
-`groupby_col`: string. Column name to groupby before applying func
-
-`func` : function. Function to apply to each column or row.
-
-`args` : tuple. Positional arguments to pass to func in addition to the array/series.
-
-`kwds` : Additional keyword arguments to pass as keywords arguments to func.
-
-
-**returns:**
-
-The new dataframe/series with the function applied as quickly as possible
-
-
-
