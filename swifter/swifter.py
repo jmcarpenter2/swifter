@@ -4,7 +4,7 @@ from dask import dataframe as dd
 import timeit
 import warnings
 from tqdm import tqdm
-from tqdm_dask_progressbar import TQDMDaskProgressBar
+from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 
 @pd.api.extensions.register_series_accessor("swifter")
