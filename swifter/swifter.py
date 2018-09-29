@@ -48,7 +48,7 @@ class SeriesAccessor:
 
         try:  # try to vectorize
             tmp_df = func(samp, *args, **kwds)
-            assert tmp_df.shape == samp.shape
+            assert tmp_df.shape == samp.apply(func, convert_dtype=convert_dtype, args=args, **kwds).shape
             return func(self._obj, *args, **kwds)
         except (AssertionError, AttributeError, ValueError, TypeError) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
@@ -78,6 +78,7 @@ class DataFrameAccessor:
 
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
+            print('repeat')
             self._obj.iloc[:1000, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                            result_type=result_type, args=args, **kwds)
         return wrapped
@@ -106,7 +107,8 @@ class DataFrameAccessor:
             if 'axis' in kwds.keys():
                 kwds.pop('axis')
             tmp_df = func(samp, *args, **kwds)
-            assert tmp_df.shape == samp.shape
+            assert tmp_df.shape == samp.apply(func, axis=axis, broadcast=broadcast, raw=raw,
+                                              reduce=reduce, result_type=result_type, args=args, **kwds).shape
             return func(self._obj, *args, **kwds)
         except (AssertionError, AttributeError, ValueError, TypeError) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
@@ -118,7 +120,7 @@ class DataFrameAccessor:
 
             # if pandas apply takes too long and input is not str, use dask
             if (est_apply_duration > self._obj.dask_threshold) and (not str_object):
-                return self._dask_apply(func, axis=axis, broadcast=None, raw=False, reduce=None, result_type=None, *args, **kwds)
+                return self._dask_apply(func, axis, broadcast, raw, reduce, result_type, *args, **kwds)
             else:  # use pandas
                 tqdm.pandas(desc='Pandas Apply')
                 return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
