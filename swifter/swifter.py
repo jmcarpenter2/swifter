@@ -78,7 +78,6 @@ class DataFrameAccessor:
 
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
-            print('repeat')
             self._obj.iloc[:1000, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                            result_type=result_type, args=args, **kwds)
         return wrapped
