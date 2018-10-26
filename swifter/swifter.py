@@ -9,7 +9,7 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 @pd.api.extensions.register_series_accessor("swifter")
 class SeriesAccessor:
-    def __init__(self, pandas_series, npartitions=None, dask_threshold=1):
+    def __init__(self, pandas_series, npartitions=None, dask_threshold=1, progress_bar=True):
         self._obj = pandas_series
 
         if npartitions is None:
@@ -17,6 +17,11 @@ class SeriesAccessor:
         else:
             self._obj.npartitions = npartitions
         self._obj.dask_threshold = dask_threshold
+        self._progress_bar = progress_bar
+
+    def progress_bar(self, enable=True):
+        self._progress_bar = enable
+        return self
 
     def _wrapped_apply(self, func, convert_dtype=True, args=(), **kwds):
         def wrapped():
@@ -30,11 +35,19 @@ class SeriesAccessor:
             tmp_df = dd.from_pandas(samp, npartitions=self._obj.npartitions). \
                 map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
             assert tmp_df.shape == meta.shape
-            with TQDMDaskProgressBar(desc='Dask Apply'):
+            if self._progress_bar:
+                with TQDMDaskProgressBar(desc='Dask Apply'):
+                    return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
+                        map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
+            else:
                 return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
                     map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
-            with TQDMDaskProgressBar(desc='Dask Apply'):
+            if self._progress_bar:
+                with TQDMDaskProgressBar(desc='Dask Apply'):
+                    return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
+                        apply(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
+            else:
                 return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
                     apply(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
 
@@ -61,13 +74,16 @@ class SeriesAccessor:
             if (est_apply_duration > self._obj.dask_threshold) and (not str_object):
                 return self._dask_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
-                tqdm.pandas(desc='Pandas Apply')
-                return self._obj.progress_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+                if self._progress_bar:
+                    tqdm.pandas(desc='Pandas Apply')
+                    return self._obj.progress_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+                else:
+                    return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
 
 @pd.api.extensions.register_dataframe_accessor("swifter")
 class DataFrameAccessor:
-    def __init__(self, pandas_dataframe, npartitions=None, dask_threshold=1):
+    def __init__(self, pandas_dataframe, npartitions=None, dask_threshold=1, progress_bar=True):
         self._obj = pandas_dataframe
 
         if npartitions is None:
@@ -75,6 +91,11 @@ class DataFrameAccessor:
         else:
             self._obj.npartitions = npartitions
         self._obj.dask_threshold = dask_threshold
+        self._progress_bar = progress_bar
+
+    def progress_bar(self, enable=True):
+        self._progress_bar = enable
+        return self
 
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
@@ -90,13 +111,21 @@ class DataFrameAccessor:
             tmp_df = dd.from_pandas(samp, npartitions=self._obj.npartitions).\
                 apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
             assert tmp_df.shape == meta.shape
-            with TQDMDaskProgressBar(desc='Dask Apply'):
-                return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).\
+            if self._progress_bar:
+                with TQDMDaskProgressBar(desc='Dask Apply'):
+                    return dd.from_pandas(self._obj, npartitions=self._obj.npartitions).\
+                        apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
+            else:
+                return dd.from_pandas(self._obj, npartitions=self._obj.npartitions). \
                     apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
-            tqdm.pandas(desc='Pandas Apply')
-            return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
+            if self._progress_bar:
+                tqdm.pandas(desc='Pandas Apply')
+                return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                             result_type=result_type, args=args, **kwds)
+            else:
+                return self._obj.apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
+                                         result_type=result_type, args=args, **kwds)
 
     def apply(self, func, axis=1, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         samp = self._obj.iloc[:self._obj.npartitions*2, :]
@@ -121,9 +150,13 @@ class DataFrameAccessor:
             if (est_apply_duration > self._obj.dask_threshold) and (not str_object):
                 return self._dask_apply(func, axis, broadcast, raw, reduce, result_type, *args, **kwds)
             else:  # use pandas
-                tqdm.pandas(desc='Pandas Apply')
-                return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                                result_type=result_type, args=args, **kwds)
+                if self._progress_bar:
+                    tqdm.pandas(desc='Pandas Apply')
+                    return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
+                                                    result_type=result_type, args=args, **kwds)
+                else:
+                    return self._obj.apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
+                                    result_type=result_type, args=args, **kwds)
 
 ####################################################################################################################
 

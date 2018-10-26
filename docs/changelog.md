@@ -4,7 +4,7 @@
 Fixed a bug that would call a vectorized function when in fact the vectorization was wrong to apply. We have to ensure that output data shape is aligned regardless of apply type.
 
 ## Version 0.240
-Added TQDM support, removed groupby_apply (because it's too slow), and tweaked some under-the-hood _dask_apply functionality. Specific functionality changes for pd.Series.swifter.apply include falling back to dask apply if dask map_partitions fails. Specific functionality changes for pd.DataFrame.swifter.apply include falling back to pandas apply if dask apply fails.
+Added TQDM support (to disable do `df.swifter.progress_bar(False).apply(...)`, removed groupby_apply (because it's too slow), and tweaked some under-the-hood _dask_apply functionality. Specific functionality changes for pd.Series.swifter.apply include falling back to dask apply if dask map_partitions fails. Specific functionality changes for pd.DataFrame.swifter.apply include falling back to pandas apply if dask apply fails.
 
 ## Version 0.230
 Made a change so that swifter uses pandas apply when input is series/dataframe of dtype string. This is a temporary solution to slow dask apply processing of strings.

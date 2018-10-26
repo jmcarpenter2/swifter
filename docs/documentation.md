@@ -66,3 +66,16 @@ New in pandas version 0.23.0.
 **returns:**
 
 The new dataframe/series with the function applied as quickly as possible
+
+
+## 3. `pandas.DataFrame.swifter.progress_bar(False).apply`
+
+```python
+def pandas.DataFrame.swifter.progress_bar(enable=True)
+```
+Enable or disable the TQDM progress bar by setting the enable parameter to True/False, respectively.
+
+For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, without the TQDM progress bar.
+```python
+df.swifter.progress_bar(False).apply(lambda x: x+1)
+```
