@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.260
+Added support for rolling objects in syntax that reflects pandas. `df.swifter.rolling(..).apply(...)`
+
 ## Version 0.250
 Fixed a bug that would call a vectorized function when in fact the vectorization was wrong to apply. We have to ensure that output data shape is aligned regardless of apply type.
 

@@ -67,8 +67,15 @@ New in pandas version 0.23.0.
 
 The new dataframe/series with the function applied as quickly as possible
 
+## 3. `pandas.DataFrame.swifter.rolling.apply`
 
-## 3. `pandas.DataFrame.swifter.progress_bar(False).apply`
+```python
+def pandas.DataFrame.swifter.rolling(window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None).apply(func, *args, **kwds)
+```
+Applies over a rolling object on the original series/dataframe in the fastest available manner.
+
+
+## 4. `pandas.DataFrame.swifter.progress_bar(False).apply`
 
 ```python
 def pandas.DataFrame.swifter.progress_bar(enable=True)

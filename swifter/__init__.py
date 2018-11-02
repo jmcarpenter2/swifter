@@ -1,4 +1,4 @@
 from .swifter import SeriesAccessor, DataFrameAccessor
 
 __all__ = ['SeriesAccessor, DataFrameAccessor']
-__version__ = '0.252'
+__version__ = '0.260'
