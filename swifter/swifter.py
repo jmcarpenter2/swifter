@@ -6,7 +6,8 @@ from psutil import cpu_count
 from tqdm import tqdm
 from dask import dataframe as dd
 
-import tqdm_dask_progressbar
+from tqdm import tqdm
+from tqdm_dask_progressbar import TQDMDaskProgressBar
 
 SAMP_SIZE = 1000
 
@@ -128,7 +129,6 @@ class DataFrameAccessor:
         return Rolling(self._obj, self._npartitions, self._dask_threshold, self._progress_bar, **kwds)
 
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
-        # TODO: `reduce` is a standard keyword in Python, prefer an alternate name.
         def wrapped():
             self._obj.iloc[:SAMP_SIZE, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
                                                 result_type=result_type, args=args, **kwds)

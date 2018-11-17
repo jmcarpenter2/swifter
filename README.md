@@ -31,8 +31,10 @@ df['x2'] = df['x'].swifter.apply(lambda x: x**2)
 # use swifter apply on whole dataframe
 df['agg'] = df.swifter.apply(lambda x: x.sum() - x.min())
 
-df['outCol'] = df[['inCol1'], ['inCol2']].swifter.apply(my_func)
-df['outCol'] = df[['inCol1'], ['inCol2'], ['inCol3']].swifter.apply(my_func, positional_arg, keyword_arg=keyword_argval)
+# use swifter apply on specific columns
+df['outCol'] = df[['inCol1', 'inCol2']].swifter.apply(my_func)
+df['outCol'] = df[['inCol1', 'inCol2', 'inCol3']].swifter.apply(my_func,
+             positional_arg, keyword_arg=keyword_argval)
 ```
 
 Further documentations on swifter is available [here](docs/documentation.md).
