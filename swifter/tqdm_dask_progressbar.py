@@ -2,7 +2,7 @@ from dask.callbacks import Callback
 from tqdm import tqdm_notebook
 
 
-class TQDMDaskProgressBar(Callback):
+class TQDMDaskProgressBar(Callback, object):
     """
     A tqdm progress bar for dask.
 
