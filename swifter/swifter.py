@@ -3,11 +3,10 @@ import warnings
 import pandas as pd
 
 from psutil import cpu_count
-from tqdm import tqdm
 from dask import dataframe as dd
 
 from tqdm import tqdm
-from tqdm_dask_progressbar import TQDMDaskProgressBar
+from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 SAMP_SIZE = 1000
 
@@ -24,6 +23,15 @@ class SeriesAccessor:
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
 
+    def set_npartitions(self, npartitions=None):
+        if npartitions is None:
+            self._npartitions = cpu_count() * 2
+        else:
+            self._npartitions = npartitions
+
+    def set_dask_threshold(self, dask_threshold=1):
+        self._dask_threshold = dask_threshold
+
     def progress_bar(self, enable=True):
         self._progress_bar = enable
         return self
@@ -36,7 +44,7 @@ class SeriesAccessor:
             "win_type": win_type,
             "on": on,
             "axis": axis,
-            "closed": closed
+            "closed": closed,
         }
         return Rolling(self._obj, self._npartitions, self._dask_threshold, self._progress_bar, **kwds)
 
@@ -47,42 +55,61 @@ class SeriesAccessor:
         return wrapped
 
     def _dask_apply(self, func, convert_dtype, *args, **kwds):
-        samp = self._obj.iloc[:self._npartitions * 2]
+        samp = self._obj.iloc[: self._npartitions * 2]
         meta = samp.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
         try:
-            tmp_df = dd.from_pandas(samp, npartitions=self._npartitions). \
-                map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
+            tmp_df = (
+                dd.from_pandas(samp, npartitions=self._npartitions)
+                .map_partitions(func, *args, meta=meta, **kwds)
+                .compute(scheduler="processes")
+            )
             assert tmp_df.shape == meta.shape
             if self._progress_bar:
-                with tqdm_dask_progressbar.TQDMDaskProgressBar(desc='Dask Apply'):
-                    return dd.from_pandas(self._obj, npartitions=self._npartitions). \
-                        map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
+                with TQDMDaskProgressBar(desc="Dask Apply"):
+                    return (
+                        dd.from_pandas(self._obj, npartitions=self._npartitions)
+                        .map_partitions(func, *args, meta=meta, **kwds)
+                        .compute(scheduler="processes")
+                    )
             else:
-                return dd.from_pandas(self._obj, npartitions=self._npartitions). \
-                    map_partitions(func, *args, meta=meta, **kwds).compute(scheduler='processes')
+                return (
+                    dd.from_pandas(self._obj, npartitions=self._npartitions)
+                    .map_partitions(func, *args, meta=meta, **kwds)
+                    .compute(scheduler="processes")
+                )
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
             if self._progress_bar:
-                with tqdm_dask_progressbar.TQDMDaskProgressBar(desc='Dask Apply'):
-                    return dd.from_pandas(self._obj, npartitions=self._npartitions). \
-                        apply(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
+                with TQDMDaskProgressBar(desc="Dask Apply"):
+                    return (
+                        dd.from_pandas(self._obj, npartitions=self._npartitions)
+                        .apply(lambda x: func(x, *args, **kwds), meta=meta)
+                        .compute(scheduler="processes")
+                    )
             else:
-                return dd.from_pandas(self._obj, npartitions=self._npartitions). \
-                    apply(lambda x: func(x, *args, **kwds), meta=meta).compute(scheduler='processes')
+                return (
+                    dd.from_pandas(self._obj, npartitions=self._npartitions)
+                    .apply(lambda x: func(x, *args, **kwds), meta=meta)
+                    .compute(scheduler="processes")
+                )
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
-        samp = self._obj.iloc[:self._npartitions * 2]
-        str_object = samp.dtype == 'object'  # check if input is string
+        samp = self._obj.iloc[: self._npartitions * 2]
+        str_object = samp.dtype == "object"  # check if input is string
 
-        if 'axis' in kwds.keys():
-            kwds.pop('axis')
-            warnings.warn('Axis keyword not necessary because applying on a Series.')
+        if "axis" in kwds.keys():
+            kwds.pop("axis")
+            warnings.warn("Axis keyword not necessary because applying on a Series.")
 
         try:  # try to vectorize
             tmp_df = func(samp, *args, **kwds)
             assert tmp_df.shape == samp.apply(func, convert_dtype=convert_dtype, args=args, **kwds).shape
             return func(self._obj, *args, **kwds)
-        except (AssertionError, AttributeError, ValueError,
-                TypeError) as e:  # if can't vectorize, estimate time to pandas apply
+        except (
+            AssertionError,
+            AttributeError,
+            ValueError,
+            TypeError,
+        ) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
             n_repeats = 3
             timed = timeit.timeit(wrapped, number=n_repeats)
@@ -94,7 +121,7 @@ class SeriesAccessor:
                 return self._dask_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
-                    tqdm.pandas(desc='Pandas Apply')
+                    tqdm.pandas(desc="Pandas Apply")
                     return self._obj.progress_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 else:
                     return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
@@ -112,6 +139,15 @@ class DataFrameAccessor:
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
 
+    def set_npartitions(self, npartitions=None):
+        if npartitions is None:
+            self._npartitions = cpu_count() * 2
+        else:
+            self._npartitions = npartitions
+
+    def set_dask_threshold(self, dask_threshold=1):
+        self._dask_threshold = dask_threshold
+
     def progress_bar(self, enable=True):
         self._progress_bar = enable
         return self
@@ -124,56 +160,99 @@ class DataFrameAccessor:
             "win_type": win_type,
             "on": on,
             "axis": axis,
-            "closed": closed
+            "closed": closed,
         }
         return Rolling(self._obj, self._npartitions, self._dask_threshold, self._progress_bar, **kwds)
 
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
-            self._obj.iloc[:SAMP_SIZE, :].apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                                result_type=result_type, args=args, **kwds)
+            self._obj.iloc[:SAMP_SIZE, :].apply(
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
 
         return wrapped
 
     def _dask_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, *args, **kwds):
-        samp = self._obj.iloc[:self._npartitions * 2, :]
-        meta = samp.apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                          result_type=result_type, args=args, **kwds)
+        samp = self._obj.iloc[: self._npartitions * 2, :]
+        meta = samp.apply(
+            func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+        )
         try:
-            tmp_df = dd.from_pandas(samp, npartitions=self._npartitions). \
-                apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
+            tmp_df = (
+                dd.from_pandas(samp, npartitions=self._npartitions)
+                .apply(func, *args, axis=axis, meta=meta, **kwds)
+                .compute(scheduler="processes")
+            )
             assert tmp_df.shape == meta.shape
             if self._progress_bar:
-                with tqdm_dask_progressbar.TQDMDaskProgressBar(desc='Dask Apply'):
-                    return dd.from_pandas(self._obj, npartitions=self._npartitions). \
-                        apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
+                with TQDMDaskProgressBar(desc="Dask Apply"):
+                    return (
+                        dd.from_pandas(self._obj, npartitions=self._npartitions)
+                        .apply(func, *args, axis=axis, meta=meta, **kwds)
+                        .compute(scheduler="processes")
+                    )
             else:
-                return dd.from_pandas(self._obj, npartitions=self._npartitions). \
-                    apply(func, *args, axis=axis, meta=meta, **kwds).compute(scheduler='processes')
+                return (
+                    dd.from_pandas(self._obj, npartitions=self._npartitions)
+                    .apply(func, *args, axis=axis, meta=meta, **kwds)
+                    .compute(scheduler="processes")
+                )
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
             if self._progress_bar:
-                tqdm.pandas(desc='Pandas Apply')
-                return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                                result_type=result_type, args=args, **kwds)
+                tqdm.pandas(desc="Pandas Apply")
+                return self._obj.progress_apply(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
+                )
             else:
-                return self._obj.apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                       result_type=result_type, args=args, **kwds)
+                return self._obj.apply(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
+                )
 
     def apply(self, func, axis=1, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
-        samp = self._obj.iloc[:self._npartitions * 2, :]
-        str_object = 'object' in samp.dtypes.values  # check if input is string
+        samp = self._obj.iloc[: self._npartitions * 2, :]
+        str_object = "object" in samp.dtypes.values  # check if input is string
 
         try:  # try to vectorize
-            if 'axis' in kwds.keys():
-                kwds.pop('axis')
+            if "axis" in kwds.keys():
+                kwds.pop("axis")
             tmp_df = func(samp, *args, **kwds)
-            assert tmp_df.shape == samp.apply(func, axis=axis, broadcast=broadcast, raw=raw,
-                                              reduce=reduce, result_type=result_type, args=args, **kwds).shape
+            assert (
+                tmp_df.shape
+                == samp.apply(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
+                ).shape
+            )
             return func(self._obj, *args, **kwds)
-        except (AssertionError, AttributeError, ValueError,
-                TypeError) as e:  # if can't vectorize, estimate time to pandas apply
-            wrapped = self._wrapped_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                          result_type=result_type, args=args, **kwds)
+        except (
+            AssertionError,
+            AttributeError,
+            ValueError,
+            TypeError,
+        ) as e:  # if can't vectorize, estimate time to pandas apply
+            wrapped = self._wrapped_apply(
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
             n_repeats = 3
             timed = timeit.timeit(wrapped, number=n_repeats)
             samp_proc_est = timed / n_repeats
@@ -184,12 +263,28 @@ class DataFrameAccessor:
                 return self._dask_apply(func, axis, broadcast, raw, reduce, result_type, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
-                    tqdm.pandas(desc='Pandas Apply')
-                    return self._obj.progress_apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                                    result_type=result_type, args=args, **kwds)
+                    tqdm.pandas(desc="Pandas Apply")
+                    return self._obj.progress_apply(
+                        func,
+                        axis=axis,
+                        broadcast=broadcast,
+                        raw=raw,
+                        reduce=reduce,
+                        result_type=result_type,
+                        args=args,
+                        **kwds
+                    )
                 else:
-                    return self._obj.apply(func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce,
-                                           result_type=result_type, args=args, **kwds)
+                    return self._obj.apply(
+                        func,
+                        axis=axis,
+                        broadcast=broadcast,
+                        raw=raw,
+                        reduce=reduce,
+                        result_type=result_type,
+                        args=args,
+                        **kwds
+                    )
 
 
 class Transformation:
@@ -203,6 +298,15 @@ class Transformation:
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
 
+    def set_npartitions(self, npartitions=None):
+        if npartitions is None:
+            self._npartitions = cpu_count() * 2
+        else:
+            self._npartitions = npartitions
+
+    def set_dask_threshold(self, dask_threshold=1):
+        self._dask_threshold = dask_threshold
+
     def progress_bar(self, enable=True):
         self._progress_bar = enable
         return self
@@ -215,10 +319,10 @@ class Transformation:
 
     def _dask_apply(self, func, *args, **kwds):
         if self._progress_bar:
-            with tqdm_dask_progressbar.TQDMDaskProgressBar(desc='Dask Apply'):
-                return self._obj_dd.apply(func, *args, **kwds).compute(scheduler='processes')
+            with TQDMDaskProgressBar(desc="Dask Apply"):
+                return self._obj_dd.apply(func, *args, **kwds).compute(scheduler="processes")
         else:
-            return self._obj_dd.apply(func, *args, **kwds).compute(scheduler='processes')
+            return self._obj_dd.apply(func, *args, **kwds).compute(scheduler="processes")
 
     def apply(self, func, *args, **kwds):
         # estimate time to pandas apply
@@ -233,7 +337,7 @@ class Transformation:
             return self._dask_apply(func, *args, **kwds)
         else:  # use pandas
             if self._progress_bar:
-                tqdm.pandas(desc='Pandas Apply')
+                tqdm.pandas(desc="Pandas Apply")
                 return self._obj_pd.apply(func, *args, **kwds)
             else:
                 return self._obj_pd.apply(func, *args, **kwds)
@@ -244,6 +348,6 @@ class Rolling(Transformation):
         super(self).__init__(obj, npartitions, dask_threshold, progress_bar)
         self._samp_pd = self._samp_pd.rolling(**kwds)
         self._obj_pd = self._obj_pd.rolling(**kwds)
-        kwds.pop('on')
-        kwds.pop('closed')
+        kwds.pop("on")
+        kwds.pop("closed")
         self._obj_dd = self._obj_dd.rolling(**kwds)

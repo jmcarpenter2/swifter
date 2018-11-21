@@ -19,7 +19,7 @@ class TQDMDaskProgressBar(Callback):
     def __init__(self, start=None, start_state=None, pretask=None, posttask=None, finish=None, **kwargs):
         super(self).__init__(start=start, start_state=start_state, pretask=pretask, posttask=posttask, finish=finish)
         self.tqdm_args = kwargs
-        self.states = ['ready', 'waiting', 'running', 'finished']
+        self.states = ["ready", "waiting", "running", "finished"]
 
     def _start_state(self, dsk, state):
         self._tqdm = tqdm_notebook(total=sum(len(state[k]) for k in self.states), **self.tqdm_args)

@@ -1,7 +1,7 @@
 # swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner.
 
-*Current version == 0.260*
+*Current version == 0.261*
 
 To know about latest improvements, please check [changelog](docs/changelog.md).
 
@@ -52,6 +52,7 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 ## Development
 
 * This package is built using PyCharm IDE, with Anaconda Python 2.7.12. Also works fine with Python3.7 but still in experimental area.
+* The code was styled using `black -l 120` from the package black
 * For basic styling use `pycodestyle  --statistics -qq  --ignore E501 .` pep8 has been renamed to pycodestyle (GitHub issue #466)
 
 ## Notes
