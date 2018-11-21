@@ -28,9 +28,11 @@ class SeriesAccessor:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
+        return self
 
     def set_dask_threshold(self, dask_threshold=1):
         self._dask_threshold = dask_threshold
+        return self
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable
@@ -144,9 +146,11 @@ class DataFrameAccessor:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
+        return self
 
     def set_dask_threshold(self, dask_threshold=1):
         self._dask_threshold = dask_threshold
+        return self
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable
@@ -303,9 +307,11 @@ class Transformation:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
+        return self
 
     def set_dask_threshold(self, dask_threshold=1):
         self._dask_threshold = dask_threshold
+        return self
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable

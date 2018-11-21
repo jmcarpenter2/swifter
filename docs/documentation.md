@@ -88,3 +88,29 @@ For example, let's say we have a pandas dataframe df. The following will perform
 ```python
 df.swifter.progress_bar(False).apply(lambda x: x+1)
 ```
+
+## 5. `pandas.DataFrame.swifter.set_npartitions(npartitions=None).apply`
+
+Specify the number of partitions to allocate to swifter, if parallel processing is chosen to be the quickest apply.
+If npartitions=None, it defaults to cpu_count()*2
+
+```python
+def pandas.DataFrame.swifter.set_npartitions(npartitions=None)
+```
+
+For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, using 2 partitions 
+```python
+df.swifter.set_npartitions(2).apply(lambda x: x+1)
+```
+
+## 6. `pandas.DataFrame.swifter.set_dask_threshold(dask_threshold=1).apply`
+
+Specify the dask threshold (in seconds) for the max allowable time estimate for a pandas apply on the full dataframe
+```python
+def pandas.DataFrame.swifter.set_dask_threshold(dask_threshold=1)
+```
+
+For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, with the threshold set to 3 seconds
+```python
+df.swifter.set_dask_threshold(dask_threshold=3).apply(lambda x: x+1)
+```

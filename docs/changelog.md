@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.270
+Added documentation and code styling thanks to @msampathkumar. Also included override options for dask_threshold and npartitions parameters.
+
 ## Version 0.260
 Added support for rolling objects in syntax that reflects pandas. `df.swifter.rolling(..).apply(...)`
 
