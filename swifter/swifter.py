@@ -8,6 +8,8 @@ from dask import dataframe as dd
 from tqdm import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
+from numba.errors import TypingError
+
 SAMP_SIZE = 1000
 
 
@@ -111,6 +113,7 @@ class SeriesAccessor:
             AttributeError,
             ValueError,
             TypeError,
+            TypingError,
         ) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
             n_repeats = 3
@@ -253,6 +256,7 @@ class DataFrameAccessor:
             AttributeError,
             ValueError,
             TypeError,
+            TypingError,
         ) as e:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(
                 func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds

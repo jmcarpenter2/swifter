@@ -3,7 +3,7 @@ from distutils.core import setup
 setup(
     name='swifter',
     packages=['swifter'],  # this must be the same as the name above
-    version='0.272',
+    version='0.273',
     description='A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner',
     author='Jason Carpenter',
     author_email='jcarpenter@manifold.ai',
@@ -14,7 +14,8 @@ setup(
         'pandas>=0.23.0',
         'psutil',
         'dask[complete]>=0.19.0',
-        'tqdm'
+        'tqdm',
+	    'numba'
     ],
     classifiers=[],
 )
