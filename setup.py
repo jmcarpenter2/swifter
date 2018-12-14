@@ -3,7 +3,7 @@ from distutils.core import setup
 setup(
     name='swifter',
     packages=['swifter'],  # this must be the same as the name above
-    version='0.273',
+    version='0.280',
     description='A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner',
     author='Jason Carpenter',
     author_email='jcarpenter@manifold.ai',

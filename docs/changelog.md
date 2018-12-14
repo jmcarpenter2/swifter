@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.280
+Swifter now defaults to axis=0, with a NotImplementedError for when trying to use dask on large datasets, because dask hasn't implemented axis=0 applies yet.
+
 ## Version 0.270
 Added documentation and code styling thanks to @msampathkumar. Also included override options for dask_threshold and npartitions parameters.
 

@@ -1,7 +1,7 @@
 # swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner.
 
-*Current version == 0.273*
+*Current version == 0.280*
 
 To know about latest improvements, please check [changelog](docs/changelog.md).
 

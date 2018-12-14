@@ -23,14 +23,14 @@ def pandas.Series.swifter.apply(func, convert_dtype=True, args=(), **kwds)
 Efficiently apply any function to a pandas dataframe in the fastest available manner.
 
 ```python
-def pandas.DataFrame.swifter.apply(func, axis=1, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds)
+def pandas.DataFrame.swifter.apply(func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds)
 ```
 
 **Parameters:**
 
 `func` : function. Function to apply to each column or row.
 
-`axis` : {0 or 'index', 1 or 'columns'}, default 0. **For now, Dask only supports axis=1, and thus swifter is limited to axis=1**. Axis along which the function is applied:
+`axis` : {0 or 'index', 1 or 'columns'}, default 0. **For now, Dask only supports axis=1, and thus swifter is limited to axis=1 on large datasets when the function cannot be vectorized.** Axis along which the function is applied:
 
 * 0 or 'index': apply function to each column.
 * 1 or 'columns': apply function to each row.
