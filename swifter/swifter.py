@@ -297,7 +297,7 @@ class DataFrameAccessor:
                     )
 
 
-class Transformation:
+class Transformation(object):
     def __init__(self, obj, npartitions=None, dask_threshold=1, progress_bar=True):
         self._obj = obj
         self._samp_pd = obj.iloc[:SAMP_SIZE]
@@ -357,7 +357,7 @@ class Transformation:
 
 class Rolling(Transformation):
     def __init__(self, obj, npartitions=None, dask_threshold=1, progress_bar=True, **kwds):
-        super(self).__init__(obj, npartitions, dask_threshold, progress_bar)
+        super(Rolling, self).__init__(obj, npartitions, dask_threshold, progress_bar)
         self._samp_pd = self._samp_pd.rolling(**kwds)
         self._obj_pd = self._obj_pd.rolling(**kwds)
         kwds.pop("on")
