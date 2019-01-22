@@ -3,6 +3,9 @@ A package which efficiently applies any function to a pandas dataframe or series
 
 *Current version == 0.281*
 
+[![CircleCI](https://circleci.com/gh/jmcarpenter2/swifter/tree/master.svg?style=svg)](https://circleci.com/gh/jmcarpenter2/swifter/tree/master)
+
+
 To know about latest improvements, please check [changelog](docs/changelog.md).
 
 ## Installation:
