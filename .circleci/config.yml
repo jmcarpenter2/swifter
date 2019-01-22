@@ -11,11 +11,11 @@ jobs:
       - run:
           name: Black lint check
           command: |
-            pip install black && black -l 120 --check .
+            pip install black && cd swifter && black -l 120 --check .
       - run:
           name: Flake8 lint check
           command: |
-            flake8 --max-line-length 120 . 
+            cd swifter && flake8 --max-line-length 120 . 
 
 workflows:
   version: 2
