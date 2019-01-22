@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  test-lint:
+    parallelism: 1
+    working_directory: ~/repo
+    docker:
+      - image: manifoldai/docker-ml-dev:1.0
+
+    steps:
+      - checkout
+      - run:
+          name: Black lint check
+          command: |
+            pip install black && black -l 120 --check .
+      - run:
+          name: Flake8 lint check
+          command: |
+            flake8 --max-line-length 120 . 
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - test-lint

@@ -267,9 +267,11 @@ class DataFrameAccessor:
             # if pandas apply takes too long and input is not str, use dask
             if (est_apply_duration > self._dask_threshold) and (not str_object):
                 if axis == 0:
-                    raise NotImplementedError("Swifter cannot perform axis=0 applies on large datasets.\n"
-                                              "Dask currently does not have an axis=0 apply implemented.\n"
-                                              "More details at https://github.com/jmcarpenter2/swifter/issues/10")
+                    raise NotImplementedError(
+                        "Swifter cannot perform axis=0 applies on large datasets.\n"
+                        "Dask currently does not have an axis=0 apply implemented.\n"
+                        "More details at https://github.com/jmcarpenter2/swifter/issues/10"
+                    )
                 return self._dask_apply(func, axis, broadcast, raw, reduce, result_type, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:

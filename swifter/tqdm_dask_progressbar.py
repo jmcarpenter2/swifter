@@ -17,7 +17,9 @@ class TQDMDaskProgressBar(Callback, object):
     """
 
     def __init__(self, start=None, start_state=None, pretask=None, posttask=None, finish=None, **kwargs):
-        super(TQDMDaskProgressBar, self).__init__(start=start, start_state=start_state, pretask=pretask, posttask=posttask, finish=finish)
+        super(TQDMDaskProgressBar, self).__init__(
+            start=start, start_state=start_state, pretask=pretask, posttask=posttask, finish=finish
+        )
         self.tqdm_args = kwargs
         self.states = ["ready", "waiting", "running", "finished"]
 
