@@ -169,7 +169,7 @@ class DataFrameAccessor:
         self._progress_bar = enable
         return self
 
-    def enable_string_dasking(self, enable=True):
+    def allow_dask_on_strings(self, enable=True):
         self._allow_dask_on_strings = enable
         return self
 
