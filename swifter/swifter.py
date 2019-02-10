@@ -76,15 +76,12 @@ class SeriesAccessor:
                         .compute(scheduler="processes")
                     )
             else:
-                print "DASKING!"
                 return (
                     dd.from_pandas(self._obj, npartitions=self._npartitions)
                     .map_partitions(func, *args, meta=meta, **kwds)
                     .compute(scheduler="processes")
                 )
-                print "DONE DASKING!"
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
-            print "EXCEPTION!!!"
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc="Dask Apply"):
                     return (
