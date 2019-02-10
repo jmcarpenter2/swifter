@@ -122,7 +122,7 @@ Specify whether to allow dask to handle dataframes containing string types.  Das
 def pandas.DataFrame.swifter.allow_dask_on_strings(enable=True)
 ```
 
-For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, with the threshold set to 3 seconds
+For example, let's say we have a pandas dataframe df. The following will allow Dask to process a dataframe with string columns.
 ```python
-df.swifter.set_dask_threshold(dask_threshold=3).apply(lambda x: x+1)
+df.swifter.allow_dask_on_strings().apply(lambda x: x+1)
 ```
