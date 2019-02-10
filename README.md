@@ -1,7 +1,7 @@
 # swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner.
 
-*Current version == 0.281*
+*Current version == 0.282*
 
 [![CircleCI](https://circleci.com/gh/jmcarpenter2/swifter/tree/master.svg?style=svg)](https://circleci.com/gh/jmcarpenter2/swifter/tree/master)
 
@@ -14,7 +14,7 @@ $ pip install -U pandas # upgrade pandas
 $ pip install swifter # first time installation
 
 $ pip install -U swifter # upgrade to latest version if already installed
-``` 
+```
 
 and then import into your code along with pandas using:
 ```

@@ -8,7 +8,7 @@ setup(
     author="Jason Carpenter",
     author_email="jcarpenter@manifold.ai",
     url="https://github.com/jmcarpenter2/swifter",  # use the URL to the github repo
-    download_url="https://github.com/jmcarpenter2/swifter/archive/0.281.tar.gz",
+    download_url="https://github.com/jmcarpenter2/swifter/archive/0.282.tar.gz",
     keywords=["pandas", "dask", "apply", "function", "parallelize", "vectorize"],
     install_requires=["pandas>=0.23.0", "psutil", "dask[complete]>=0.19.0", "tqdm", "numba"],
     classifiers=[],
