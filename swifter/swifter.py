@@ -76,12 +76,15 @@ class SeriesAccessor:
                         .compute(scheduler="processes")
                     )
             else:
+                print "DASKING!"
                 return (
                     dd.from_pandas(self._obj, npartitions=self._npartitions)
                     .map_partitions(func, *args, meta=meta, **kwds)
                     .compute(scheduler="processes")
                 )
+                print "DONE DASKING!"
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
+            print "EXCEPTION!!!"
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc="Dask Apply"):
                     return (
@@ -134,7 +137,13 @@ class SeriesAccessor:
 
 @pd.api.extensions.register_dataframe_accessor("swifter")
 class DataFrameAccessor:
-    def __init__(self, pandas_dataframe, npartitions=None, dask_threshold=1, progress_bar=True):
+    def __init__(
+            self,
+            pandas_dataframe,
+            npartitions=None,
+            dask_threshold=1,
+            progress_bar=True,
+            allow_dask_on_strings=False):
         self._obj = pandas_dataframe
 
         if npartitions is None:
@@ -143,6 +152,7 @@ class DataFrameAccessor:
             self._npartitions = npartitions
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
+        self._allow_dask_on_strings = allow_dask_on_strings
 
     def set_npartitions(self, npartitions=None):
         if npartitions is None:
@@ -157,6 +167,10 @@ class DataFrameAccessor:
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable
+        return self
+
+    def enable_string_dasking(self, enable=True):
+        self._allow_dask_on_strings = enable
         return self
 
     def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
@@ -231,7 +245,8 @@ class DataFrameAccessor:
 
     def apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         samp = self._obj.iloc[: self._npartitions * 2, :]
-        str_object = "object" in samp.dtypes.values  # check if input is string
+        # check if input is string
+        str_object = ("object" in samp.dtypes.values) if not self._allow_dask_on_strings else False
 
         try:  # try to vectorize
             tmp_df = func(samp, *args, **kwds)
