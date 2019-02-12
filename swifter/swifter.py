@@ -15,7 +15,13 @@ SAMP_SIZE = 1000
 
 @pd.api.extensions.register_series_accessor("swifter")
 class SeriesAccessor:
-    def __init__(self, pandas_series, npartitions=None, dask_threshold=1, progress_bar=True):
+    def __init__(
+            self,
+            pandas_dataframe,
+            npartitions=None,
+            dask_threshold=1,
+            progress_bar=True,
+            allow_dask_on_strings=False):
         self._obj = pandas_series
 
         if npartitions is None:
@@ -24,6 +30,7 @@ class SeriesAccessor:
             self._npartitions = npartitions
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
+        self._allow_dask_on_strings = allow_dask_on_strings
 
     def set_npartitions(self, npartitions=None):
         if npartitions is None:
@@ -38,6 +45,10 @@ class SeriesAccessor:
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable
+        return self
+    
+    def allow_dask_on_strings(self, enable=True):
+        self._allow_dask_on_strings = enable
         return self
 
     def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
