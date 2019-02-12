@@ -1,7 +1,7 @@
 # Changelog
 
 ## Version 0.282
-Add an option `allow_dask_on_strings` to `DataFrameAccessor`.
+Add an option `allow_dask_on_strings` to `DataFrameAccessor`. This is a non-recommended option if you are doing string processing. It is intended for using the string as a lookup for the rest of the dataframe processing.
 
 ## Version 0.280
 Swifter now defaults to axis=0, with a NotImplementedError for when trying to use dask on large datasets, because dask hasn't implemented axis=0 applies yet.
