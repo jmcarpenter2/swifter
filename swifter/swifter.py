@@ -14,7 +14,15 @@ SAMP_SIZE = 1000
 
 
 class _SwifterObject:
-    def __init__(self, pandas_obj, npartitions=None, dask_threshold=1, scheduler="processes", progress_bar=True, allow_dask_on_strings=False):
+    def __init__(
+        self,
+        pandas_obj,
+        npartitions=None,
+        dask_threshold=1,
+        scheduler="processes",
+        progress_bar=True,
+        allow_dask_on_strings=False,
+    ):
         self._obj = pandas_obj
 
         if npartitions is None:
