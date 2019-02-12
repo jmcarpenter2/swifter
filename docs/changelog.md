@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.283
+Allowed user to override scheduler default to multithreading if desired.
+
 ## Version 0.282
 Add an option `allow_dask_on_strings` to `DataFrameAccessor`. This is a non-recommended option if you are doing string processing. It is intended for using the string as a lookup for the rest of the dataframe processing. This override is also included in `SeriesAccessor`, but there I am not aware of a use-case that it makes sense to use this.
 
