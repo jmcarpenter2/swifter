@@ -14,7 +14,15 @@ SAMP_SIZE = 1000
 
 
 class _SwifterObject:
-    def __init__(self, pandas_obj, npartitions=None, dask_threshold=1, progress_bar=True, allow_dask_on_strings=False):
+    def __init__(
+        self,
+        pandas_obj,
+        npartitions=None,
+        dask_threshold=1,
+        scheduler="processes",
+        progress_bar=True,
+        allow_dask_on_strings=False,
+    ):
         self._obj = pandas_obj
 
         if npartitions is None:
@@ -22,6 +30,7 @@ class _SwifterObject:
         else:
             self._npartitions = npartitions
         self._dask_threshold = dask_threshold
+        self._scheduler = scheduler
         self._progress_bar = progress_bar
         self._allow_dask_on_strings = allow_dask_on_strings
 
@@ -40,6 +49,14 @@ class _SwifterObject:
         Set the threshold (seconds) for maximum allowed estimated duration of pandas apply before switching to dask
         """
         self._dask_threshold = dask_threshold
+        return self
+
+    def set_dask_scheduler(self, scheduler="processes"):
+        """
+        Set the dask scheduler
+        :param scheduler: String, ["threads", "processes"]
+        """
+        self._scheduler = scheduler
         return self
 
     def progress_bar(self, enable=True):
@@ -87,7 +104,7 @@ class SeriesAccessor(_SwifterObject):
             tmp_df = (
                 dd.from_pandas(samp, npartitions=self._npartitions)
                 .map_partitions(func, *args, meta=meta, **kwds)
-                .compute(scheduler="processes")
+                .compute(scheduler=self._scheduler)
             )
             assert tmp_df.shape == meta.shape
             if self._progress_bar:
@@ -95,13 +112,13 @@ class SeriesAccessor(_SwifterObject):
                     return (
                         dd.from_pandas(self._obj, npartitions=self._npartitions)
                         .map_partitions(func, *args, meta=meta, **kwds)
-                        .compute(scheduler="processes")
+                        .compute(scheduler=self._scheduler)
                     )
             else:
                 return (
                     dd.from_pandas(self._obj, npartitions=self._npartitions)
                     .map_partitions(func, *args, meta=meta, **kwds)
-                    .compute(scheduler="processes")
+                    .compute(scheduler=self._scheduler)
                 )
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
             if self._progress_bar:
@@ -109,13 +126,13 @@ class SeriesAccessor(_SwifterObject):
                     return (
                         dd.from_pandas(self._obj, npartitions=self._npartitions)
                         .apply(lambda x: func(x, *args, **kwds), meta=meta)
-                        .compute(scheduler="processes")
+                        .compute(scheduler=self._scheduler)
                     )
             else:
                 return (
                     dd.from_pandas(self._obj, npartitions=self._npartitions)
                     .apply(lambda x: func(x, *args, **kwds), meta=meta)
-                    .compute(scheduler="processes")
+                    .compute(scheduler=self._scheduler)
                 )
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
@@ -177,7 +194,7 @@ class DataFrameAccessor(_SwifterObject):
             tmp_df = (
                 dd.from_pandas(samp, npartitions=self._npartitions)
                 .apply(func, *args, axis=axis, meta=meta, **kwds)
-                .compute(scheduler="processes")
+                .compute(scheduler=self._scheduler)
             )
             assert tmp_df.shape == meta.shape
             if self._progress_bar:
@@ -185,13 +202,13 @@ class DataFrameAccessor(_SwifterObject):
                     return (
                         dd.from_pandas(self._obj, npartitions=self._npartitions)
                         .apply(func, *args, axis=axis, meta=meta, **kwds)
-                        .compute(scheduler="processes")
+                        .compute(scheduler=self._scheduler)
                     )
             else:
                 return (
                     dd.from_pandas(self._obj, npartitions=self._npartitions)
                     .apply(func, *args, axis=axis, meta=meta, **kwds)
-                    .compute(scheduler="processes")
+                    .compute(scheduler=self._scheduler)
                 )
         except (AssertionError, AttributeError, ValueError, TypeError) as e:
             if self._progress_bar:
@@ -309,9 +326,9 @@ class Transformation(_SwifterObject):
     def _dask_apply(self, func, *args, **kwds):
         if self._progress_bar:
             with TQDMDaskProgressBar(desc="Dask Apply"):
-                return self._obj_dd.apply(func, *args, **kwds).compute(scheduler="processes")
+                return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
         else:
-            return self._obj_dd.apply(func, *args, **kwds).compute(scheduler="processes")
+            return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
 
     def apply(self, func, *args, **kwds):
         """

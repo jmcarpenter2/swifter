@@ -115,7 +115,21 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_dask_threshold(dask_threshold=3).apply(lambda x: x+1)
 ```
 
-## 7. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
+## 7. `pandas.DataFrame.swifter.set_dask_scheduler(scheduler="processes").apply`
+
+Set the dask scheduler
+
+:param scheduler: String, ["threads", "processes"]
+```python
+def pandas.DataFrame.swifter.set_dask_scheduler(scheduler="processes")
+```
+
+For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, with the scheduler set to multithreading.
+```python
+df.swifter.set_dask_scheduler(scheduler="threads").apply(lambda x: x+1)
+```
+
+## 8. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
 
 Specify whether to allow dask to handle dataframes containing string types.  Dask can be particularly slow if you are actually manipulating strings, but if you just have a string column in your data frame this will allow dask to handle the execution.
 ```python
