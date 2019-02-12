@@ -15,7 +15,13 @@ SAMP_SIZE = 1000
 
 @pd.api.extensions.register_series_accessor("swifter")
 class SeriesAccessor:
-    def __init__(self, pandas_series, npartitions=None, dask_threshold=1, progress_bar=True):
+    def __init__(
+            self,
+            pandas_series,
+            npartitions=None,
+            dask_threshold=1,
+            progress_bar=True,
+            allow_dask_on_strings=False):
         self._obj = pandas_series
 
         if npartitions is None:
@@ -24,6 +30,7 @@ class SeriesAccessor:
             self._npartitions = npartitions
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
+        self._allow_dask_on_strings = allow_dask_on_strings
 
     def set_npartitions(self, npartitions=None):
         if npartitions is None:
@@ -38,6 +45,10 @@ class SeriesAccessor:
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable
+        return self
+    
+    def allow_dask_on_strings(self, enable=True):
+        self._allow_dask_on_strings = enable
         return self
 
     def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
@@ -98,7 +109,8 @@ class SeriesAccessor:
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
         samp = self._obj.iloc[: self._npartitions * 2]
-        str_object = samp.dtype == "object"  # check if input is string
+        # check if input is string or if the user is overriding the string processing default
+        str_processing = (samp.dtype == "object") if not self._allow_dask_on_strings else False
 
         if "axis" in kwds.keys():
             kwds.pop("axis")
@@ -121,8 +133,8 @@ class SeriesAccessor:
             samp_proc_est = timed / n_repeats
             est_apply_duration = samp_proc_est / SAMP_SIZE * self._obj.shape[0]
 
-            # if pandas apply takes too long and input is not str, use dask
-            if (est_apply_duration > self._dask_threshold) and (not str_object):
+            # if pandas apply takes too long and not performing str processing, use dask
+            if (est_apply_duration > self._dask_threshold) and (not str_processing):
                 return self._dask_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
@@ -134,7 +146,13 @@ class SeriesAccessor:
 
 @pd.api.extensions.register_dataframe_accessor("swifter")
 class DataFrameAccessor:
-    def __init__(self, pandas_dataframe, npartitions=None, dask_threshold=1, progress_bar=True):
+    def __init__(
+            self,
+            pandas_dataframe,
+            npartitions=None,
+            dask_threshold=1,
+            progress_bar=True,
+            allow_dask_on_strings=False):
         self._obj = pandas_dataframe
 
         if npartitions is None:
@@ -143,6 +161,7 @@ class DataFrameAccessor:
             self._npartitions = npartitions
         self._dask_threshold = dask_threshold
         self._progress_bar = progress_bar
+        self._allow_dask_on_strings = allow_dask_on_strings
 
     def set_npartitions(self, npartitions=None):
         if npartitions is None:
@@ -157,6 +176,10 @@ class DataFrameAccessor:
 
     def progress_bar(self, enable=True):
         self._progress_bar = enable
+        return self
+
+    def allow_dask_on_strings(self, enable=True):
+        self._allow_dask_on_strings = enable
         return self
 
     def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
@@ -231,7 +254,8 @@ class DataFrameAccessor:
 
     def apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         samp = self._obj.iloc[: self._npartitions * 2, :]
-        str_object = "object" in samp.dtypes.values  # check if input is string
+        # check if input is string or if the user is overriding the string processing default
+        str_processing = ("object" in samp.dtypes.values) if not self._allow_dask_on_strings else False
 
         try:  # try to vectorize
             tmp_df = func(samp, *args, **kwds)
@@ -264,8 +288,8 @@ class DataFrameAccessor:
             samp_proc_est = timed / n_repeats
             est_apply_duration = samp_proc_est / SAMP_SIZE * self._obj.shape[0]
 
-            # if pandas apply takes too long and input is not str, use dask
-            if (est_apply_duration > self._dask_threshold) and (not str_object):
+            # if pandas apply takes too long and not performing str processing, use dask
+            if (est_apply_duration > self._dask_threshold) and (not str_processing):
                 if axis == 0:
                     raise NotImplementedError(
                         "Swifter cannot perform axis=0 applies on large datasets.\n"

@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.282
+Add an option `allow_dask_on_strings` to `DataFrameAccessor`. This is a non-recommended option if you are doing string processing. It is intended for using the string as a lookup for the rest of the dataframe processing. This override is also included in `SeriesAccessor`, but there I am not aware of a use-case that it makes sense to use this.
+
 ## Version 0.280
 Swifter now defaults to axis=0, with a NotImplementedError for when trying to use dask on large datasets, because dask hasn't implemented axis=0 applies yet.
 
@@ -22,7 +25,7 @@ Made a change so that swifter uses pandas apply when input is series/dataframe o
 Added a groupby_apply function to utilize dask for groupby apply when its faster. Simply use as **df.swifter.groupby_apply(groupby_col, func)**. I would've extended the Pandas DataFrameGroupBy object, but he hasn't added support for that kind of extension yet. Also, removed the str_object limitation to utilizing dask. Now it will simply determine whether to use dask v pandas based on the dask_threshold (default 1 second).
 
 ## Version 0.210
-Fixed a bug for row-wise applies. Thanks to @slhck for poining this out. 
+Fixed a bug for row-wise applies. Thanks to @slhck for poining this out.
 
 ## Version 0.200
 Completely refactored the package as an extension to pandas, rather than an independent function call. This will allow for increased flexibility of the user and simplicity of using swiftapply.
