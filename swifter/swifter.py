@@ -13,16 +13,9 @@ from numba.errors import TypingError
 SAMP_SIZE = 1000
 
 
-@pd.api.extensions.register_series_accessor("swifter")
-class SeriesAccessor:
-    def __init__(
-            self,
-            pandas_series,
-            npartitions=None,
-            dask_threshold=1,
-            progress_bar=True,
-            allow_dask_on_strings=False):
-        self._obj = pandas_series
+class _SwifterObject:
+    def __init__(self, pandas_obj, npartitions=None, dask_threshold=1, progress_bar=True, allow_dask_on_strings=False):
+        self._obj = pandas_obj
 
         if npartitions is None:
             self._npartitions = cpu_count() * 2
@@ -46,7 +39,7 @@ class SeriesAccessor:
     def progress_bar(self, enable=True):
         self._progress_bar = enable
         return self
-    
+
     def allow_dask_on_strings(self, enable=True):
         self._allow_dask_on_strings = enable
         return self
@@ -63,6 +56,9 @@ class SeriesAccessor:
         }
         return Rolling(self._obj, self._npartitions, self._dask_threshold, self._progress_bar, **kwds)
 
+
+@pd.api.extensions.register_series_accessor("swifter")
+class SeriesAccessor(_SwifterObject):
     def _wrapped_apply(self, func, convert_dtype=True, args=(), **kwds):
         def wrapped():
             self._obj.iloc[:SAMP_SIZE].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
@@ -145,55 +141,7 @@ class SeriesAccessor:
 
 
 @pd.api.extensions.register_dataframe_accessor("swifter")
-class DataFrameAccessor:
-    def __init__(
-            self,
-            pandas_dataframe,
-            npartitions=None,
-            dask_threshold=1,
-            progress_bar=True,
-            allow_dask_on_strings=False):
-        self._obj = pandas_dataframe
-
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
-        self._dask_threshold = dask_threshold
-        self._progress_bar = progress_bar
-        self._allow_dask_on_strings = allow_dask_on_strings
-
-    def set_npartitions(self, npartitions=None):
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
-        return self
-
-    def set_dask_threshold(self, dask_threshold=1):
-        self._dask_threshold = dask_threshold
-        return self
-
-    def progress_bar(self, enable=True):
-        self._progress_bar = enable
-        return self
-
-    def allow_dask_on_strings(self, enable=True):
-        self._allow_dask_on_strings = enable
-        return self
-
-    def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
-        kwds = {
-            "window": window,
-            "min_periods": min_periods,
-            "center": center,
-            "win_type": win_type,
-            "on": on,
-            "axis": axis,
-            "closed": closed,
-        }
-        return Rolling(self._obj, self._npartitions, self._dask_threshold, self._progress_bar, **kwds)
-
+class DataFrameAccessor(_SwifterObject):
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
             self._obj.iloc[:SAMP_SIZE, :].apply(
@@ -323,31 +271,13 @@ class DataFrameAccessor:
                     )
 
 
-class Transformation(object):
-    def __init__(self, obj, npartitions=None, dask_threshold=1, progress_bar=True):
-        self._obj = obj
+class Transformation(_SwifterObject):
+    def __init__(self, obj, npartitions=None, dask_threshold=1, progress_bar=True, allow_dask_on_strings=False):
+        super().__init__(obj, npartitions, dask_threshold, progress_bar, allow_dask_on_strings)
         self._samp_pd = obj.iloc[:SAMP_SIZE]
         self._obj_pd = obj
         self._obj_dd = dd.from_pandas(obj, npartitions=npartitions)
         self._nrows = obj.shape[0]
-        self._npartitions = npartitions
-        self._dask_threshold = dask_threshold
-        self._progress_bar = progress_bar
-
-    def set_npartitions(self, npartitions=None):
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
-        return self
-
-    def set_dask_threshold(self, dask_threshold=1):
-        self._dask_threshold = dask_threshold
-        return self
-
-    def progress_bar(self, enable=True):
-        self._progress_bar = enable
-        return self
 
     def _wrapped_apply(self, func, *args, **kwds):
         def wrapped():
