@@ -17,7 +17,7 @@ SAMP_SIZE = 1000
 class SeriesAccessor:
     def __init__(
             self,
-            pandas_dataframe,
+            pandas_series,
             npartitions=None,
             dask_threshold=1,
             progress_bar=True,
