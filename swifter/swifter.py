@@ -26,6 +26,9 @@ class _SwifterObject:
         self._allow_dask_on_strings = allow_dask_on_strings
 
     def set_npartitions(self, npartitions=None):
+        """
+        Set the number of partitions to use for dask
+        """
         if npartitions is None:
             self._npartitions = cpu_count() * 2
         else:
@@ -33,18 +36,30 @@ class _SwifterObject:
         return self
 
     def set_dask_threshold(self, dask_threshold=1):
+        """
+        Set the threshold (seconds) for maximum allowed estimated duration of pandas apply before switching to dask
+        """
         self._dask_threshold = dask_threshold
         return self
 
     def progress_bar(self, enable=True):
+        """
+        Turn on/off the progress bar
+        """
         self._progress_bar = enable
         return self
 
     def allow_dask_on_strings(self, enable=True):
+        """
+        Override the string processing default, which is to not use dask if a string is contained in the pandas object
+        """
         self._allow_dask_on_strings = enable
         return self
 
     def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
+        """
+        Create a swifter rolling object
+        """
         kwds = {
             "window": window,
             "min_periods": min_periods,
@@ -104,6 +119,9 @@ class SeriesAccessor(_SwifterObject):
                 )
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
+        """
+        Apply the function to the Series using swifter
+        """
         samp = self._obj.iloc[: self._npartitions * 2]
         # check if input is string or if the user is overriding the string processing default
         str_processing = (samp.dtype == "object") if not self._allow_dask_on_strings else False
@@ -201,6 +219,9 @@ class DataFrameAccessor(_SwifterObject):
                 )
 
     def apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
+        """
+        Apply the function to the DataFrame using swifter
+        """
         samp = self._obj.iloc[: self._npartitions * 2, :]
         # check if input is string or if the user is overriding the string processing default
         str_processing = ("object" in samp.dtypes.values) if not self._allow_dask_on_strings else False
@@ -293,6 +314,9 @@ class Transformation(_SwifterObject):
             return self._obj_dd.apply(func, *args, **kwds).compute(scheduler="processes")
 
     def apply(self, func, *args, **kwds):
+        """
+        Apply the function to the transformed swifter object
+        """
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
         n_repeats = 3
