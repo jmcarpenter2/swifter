@@ -54,11 +54,11 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 
 ## Development
 
-* This package is built using PyCharm IDE, with Anaconda Python 2.7.12. Also works fine with Python3.7 but still in experimental area.
 * The code was styled using `black -l 120` from the package black
-* For basic styling use `pycodestyle  --statistics -qq  --ignore E501 .` pep8 has been renamed to pycodestyle (GitHub issue #466)
 
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
 
 2. Please upgrade your version of pandas, as the pandas extension api used in this module is a recent addition to pandas.
+
+3. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules.
