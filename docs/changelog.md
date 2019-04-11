@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.285
+Uses tqdm.autonotebook to dynamically switch between beautiful notebook progress bar and CLI version of the progress bar
+
+## Version 0.284
+Minor ipywidgets requirements update
+
 ## Version 0.283
 Allowed user to override scheduler default to multithreading if desired.
 
