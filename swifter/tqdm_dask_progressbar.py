@@ -1,5 +1,5 @@
 from dask.callbacks import Callback
-from tqdm import tqdm_notebook
+from tqdm.autonotebook import tqdm
 
 
 class TQDMDaskProgressBar(Callback, object):
@@ -24,7 +24,7 @@ class TQDMDaskProgressBar(Callback, object):
         self.states = ["ready", "waiting", "running", "finished"]
 
     def _start_state(self, dsk, state):
-        self._tqdm = tqdm_notebook(total=sum(len(state[k]) for k in self.states), **self.tqdm_args)
+        self._tqdm = tqdm(total=sum(len(state[k]) for k in self.states), **self.tqdm_args)
 
     def _posttask(self, key, result, dsk, state, worker_id):
         self._tqdm.update(1)
