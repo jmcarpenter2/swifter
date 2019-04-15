@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.286
+Fixed a bug that prevented result_type kwarg from being passed to the dask apply function. Now you can use this functionality and it will rely on dask rather than pandas.
+
+Additionally adjusted the speed estimation for data sets < 25000 rows so that it doesn't spend a lot of time estimating how long to run an apply for on the first 1000 rows when the data set is tiny. We want to asymptote to near-pandas performance even on tiny data sets.
+
 ## Version 0.285
 Uses tqdm.autonotebook to dynamically switch between beautiful notebook progress bar and CLI version of the progress bar
 
