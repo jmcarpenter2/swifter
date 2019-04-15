@@ -1,7 +1,7 @@
 # swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner.
 
-*Current version == 0.285*
+*Current version == 0.286*
 
 [![CircleCI](https://circleci.com/gh/jmcarpenter2/swifter/tree/master.svg?style=svg)](https://circleci.com/gh/jmcarpenter2/swifter/tree/master)
 
