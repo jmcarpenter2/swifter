@@ -88,7 +88,7 @@ class _SwifterObject:
             "axis": axis,
             "closed": closed,
         }
-        return Rolling(self._obj, self._npartitions, self._dask_threshold, self._progress_bar, **kwds)
+        return Rolling(self._obj, self._npartitions, self._dask_threshold, self._scheduler, self._progress_bar, **kwds)
 
 
 @pd.api.extensions.register_series_accessor("swifter")
@@ -307,8 +307,16 @@ class DataFrameAccessor(_SwifterObject):
 
 
 class Transformation(_SwifterObject):
-    def __init__(self, obj, npartitions=None, dask_threshold=1, progress_bar=True, allow_dask_on_strings=False):
-        super().__init__(obj, npartitions, dask_threshold, progress_bar, allow_dask_on_strings)
+    def __init__(
+        self,
+        obj,
+        npartitions=None,
+        dask_threshold=1,
+        scheduler="processes",
+        progress_bar=True,
+        allow_dask_on_strings=False,
+    ):
+        super().__init__(obj, npartitions, dask_threshold, scheduler, progress_bar, allow_dask_on_strings)
         self._samp_pd = obj.iloc[: self._SAMP_SIZE]
         self._obj_pd = obj
         self._obj_dd = dd.from_pandas(obj, npartitions=npartitions)
@@ -344,14 +352,14 @@ class Transformation(_SwifterObject):
         else:  # use pandas
             if self._progress_bar:
                 tqdm.pandas(desc="Pandas Apply")
-                return self._obj_pd.apply(func, *args, **kwds)
+                return self._obj_pd.progress_apply(func, *args, **kwds)
             else:
                 return self._obj_pd.apply(func, *args, **kwds)
 
 
 class Rolling(Transformation):
-    def __init__(self, obj, npartitions=None, dask_threshold=1, progress_bar=True, **kwds):
-        super(Rolling, self).__init__(obj, npartitions, dask_threshold, progress_bar)
+    def __init__(self, obj, npartitions=None, dask_threshold=1, scheduler="processes", progress_bar=True, **kwds):
+        super(Rolling, self).__init__(obj, npartitions, dask_threshold, scheduler, progress_bar)
         self._samp_pd = self._samp_pd.rolling(**kwds)
         self._obj_pd = self._obj_pd.rolling(**kwds)
         kwds.pop("on")

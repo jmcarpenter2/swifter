@@ -1,5 +1,8 @@
 # Changelog
 
+## Versino 0.287
+Fixed bugs with rolling apply. Added unit test coverage.
+
 ## Version 0.286
 Fixed a bug that prevented result_type kwarg from being passed to the dask apply function. Now you can use this functionality and it will rely on dask rather than pandas.
 
