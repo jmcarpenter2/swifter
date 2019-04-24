@@ -4,9 +4,9 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-black = "==18.9b0"
+black = "==19.3b0"
+flake8 = "==3.7.7"
 nose = "*"
-flake8 = "==3.5.0"
 
 [packages]
 pandas = ">=0.23.0"
@@ -17,4 +17,4 @@ ipywidgets = ">=7.0.0"
 numba = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.6"

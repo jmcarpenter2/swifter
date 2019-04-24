@@ -4,7 +4,7 @@ jobs:
     parallelism: 1
     working_directory: ~/repo
     docker:
-      - image: manifoldai/docker-ml-dev:1.0
+      - image: manifoldai/orbyter-ml-dev:latest
 
     steps:
       - checkout
