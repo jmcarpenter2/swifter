@@ -1,24 +1,28 @@
 version: 2
 jobs:
-  test-lint:
+  unittest-lint:
     parallelism: 1
     working_directory: ~/repo
     docker:
-      - image: manifoldai/docker-ml-dev:1.0
+      - image: manifoldai/orbyter-ml-dev:latest
 
     steps:
       - checkout
       - run:
           name: Black lint check
           command: |
-            pip install black && cd swifter && black -l 120 --check .
+            cd swifter && black -l 120 --check .
       - run:
           name: Flake8 lint check
           command: |
-            cd swifter && flake8 --max-line-length 120 . 
+            cd swifter && flake8 --max-line-length 120 .
+      - run:
+          name: Unit tests
+          command: |
+            pip install pipenv && pipenv install --dev && pipenv run nosetests
 
 workflows:
   version: 2
   build-and-test:
     jobs:
-      - test-lint
+      - unittest-lint
