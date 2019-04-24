@@ -13,13 +13,10 @@ jobs:
           command: |
             pip install black && cd swifter && black -l 120 --check .
       - run:
-          name: Flake8 lint check
-          command: |
-            cd swifter && flake8 --max-line-length 120 .
-      - run:
           name: Unit tests
           command: |
             cd swifter && nosetests
+
 workflows:
   version: 2
   build-and-test:
