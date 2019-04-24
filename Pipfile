@@ -7,6 +7,7 @@ verify_ssl = true
 black = "==19.3b0"
 flake8 = "==3.7.7"
 nose = "*"
+numba = ">=0.30.0"
 
 [packages]
 pandas = ">=0.23.0"
@@ -14,7 +15,7 @@ psutil = "*"
 dask = {extras = ["complete"],version = ">=0.19.0"}
 tqdm = ">=4.27.0"
 ipywidgets = ">=7.0.0"
-numba = "*"
+numba = ">=0.30.0"
 
 [requires]
 python_version = "3.6"
