@@ -11,11 +11,15 @@ jobs:
       - run:
           name: Black lint check
           command: |
-            pip install black && cd swifter && black -l 120 --check .
+            cd swifter && pipenv run black -l 120 --check .
+      - run:
+          name: Flake8 lint check
+          command: |
+            cd swifter && pipenv run flake8 --max-line-length 120 .
       - run:
           name: Unit tests
           command: |
-            pip install nose && cd swifter && nosetests
+            cd swifter && pipenv run nosetests
 
 workflows:
   version: 2

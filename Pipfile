@@ -1,0 +1,20 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+black = "==18.9b0"
+nose = "*"
+flake8 = "==3.5.0"
+
+[packages]
+pandas = ">=0.23.0"
+psutil = "*"
+dask = {extras = ["complete"],version = ">=0.19.0"}
+tqdm = ">=4.27.0"
+ipywidgets = ">=7.0.0"
+numba = "*"
+
+[requires]
+python_version = "3.7"

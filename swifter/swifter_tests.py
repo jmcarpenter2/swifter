@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import swifter
 
+print(f"Version {swifter.__version__}")
+
 
 def math_vec_square(x):
     return x ** 2
@@ -94,7 +96,7 @@ class TestSwifter(unittest.TestCase):
         self.assertNotEqual(before, actual)
 
     def test_vectorized_math_apply_on_large_series(self):
-        df = pd.DataFrame({"x": np.random.normal(size=1000000)})
+        df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
         series = df["x"]
 
         start_pd = time.time()
@@ -111,7 +113,7 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_nonvectorized_math_apply_on_large_series(self):
-        df = pd.DataFrame({"x": np.random.normal(size=5000000)})
+        df = pd.DataFrame({"x": np.random.normal(size=5_000_000)})
         series = df["x"]
 
         start_pd = time.time()
@@ -128,7 +130,7 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_vectorized_math_apply_on_large_dataframe(self):
-        df = pd.DataFrame({"x": np.random.normal(size=1000000), "y": np.random.uniform(size=1000000)})
+        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
         pd_val = df.apply(math_vec_multiply, axis=1)
@@ -144,7 +146,7 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_nonvectorized_math_apply_on_large_dataframe(self):
-        df = pd.DataFrame({"x": np.random.normal(size=1000000), "y": np.random.uniform(size=1000000)})
+        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
         pd_val = df.apply(math_agg_foo, axis=1)
@@ -160,7 +162,9 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_vectorized_math_apply_on_large_rolling_dataframe(self):
-        df = pd.DataFrame({"x": np.arange(0, 1000000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000000))
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+        )
 
         start_pd = time.time()
         pd_val = df.rolling("1d").apply(sum)
@@ -176,7 +180,9 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
-        df = pd.DataFrame({"x": np.arange(0, 1000000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000000))
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+        )
 
         start_pd = time.time()
         pd_val = df.rolling("1d").apply(math_agg_foo)
