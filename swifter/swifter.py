@@ -122,7 +122,7 @@ class SeriesAccessor(_SwifterObject):
                     .map_partitions(func, *args, meta=meta, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AssertionError, AttributeError, ValueError, TypeError) as e:
+        except (AssertionError, AttributeError, ValueError, TypeError):
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc="Dask Apply"):
                     return (
@@ -159,7 +159,7 @@ class SeriesAccessor(_SwifterObject):
             ValueError,
             TypeError,
             TypingError,
-        ) as e:  # if can't vectorize, estimate time to pandas apply
+        ):  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
             n_repeats = 3
             timed = timeit.timeit(wrapped, number=n_repeats)
@@ -217,7 +217,7 @@ class DataFrameAccessor(_SwifterObject):
                     .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AssertionError, AttributeError, ValueError, TypeError) as e:
+        except (AssertionError, AttributeError, ValueError, TypeError):
             if self._progress_bar:
                 tqdm.pandas(desc="Pandas Apply")
                 return self._obj.progress_apply(
@@ -262,7 +262,7 @@ class DataFrameAccessor(_SwifterObject):
             ValueError,
             TypeError,
             TypingError,
-        ) as e:  # if can't vectorize, estimate time to pandas apply
+        ):  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(
                 func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
             )
