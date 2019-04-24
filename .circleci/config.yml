@@ -15,7 +15,7 @@ jobs:
       - run:
           name: Unit tests
           command: |
-            cd swifter && nosetests
+            pip install nose && cd swifter && nosetests
 
 workflows:
   version: 2
