@@ -24,6 +24,19 @@ def math_agg_foo(row):
     return row.sum() - row.min()
 
 
+def text_foo(row):
+    if row["letter"] == "A":
+        return row["value"] * 3
+    elif row["letter"] == "B":
+        return row["value"] ** 3
+    elif row["letter"] == "C":
+        return row["value"] / 3
+    elif row["letter"] == "D":
+        return row["value"] ** (1 / 3)
+    elif row["letter"] == "E":
+        return row["value"]
+
+
 class TestSwifter(unittest.TestCase):
     def assertSeriesEqual(self, a, b, msg):
         try:
@@ -155,6 +168,22 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = df.swifter.apply(math_agg_foo, axis=1)
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)
+        self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_text_apply_on_large_dataframe(self):
+        df = pd.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
+
+        start_pd = time.time()
+        pd_val = df.apply(text_foo, axis=1)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = df.swifter.allow_dask_on_strings(True).apply(text_foo, axis=1)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
