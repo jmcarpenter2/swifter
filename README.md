@@ -61,4 +61,4 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 
 2. Please upgrade your version of pandas, as the pandas extension api used in this module is a recent addition to pandas.
 
-3. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules.
+3. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules. 
