@@ -143,7 +143,7 @@ class SeriesAccessor(_SwifterObject):
         """
         samp = self._obj.iloc[: self._npartitions * 2]
         # check if input is string or if the user is overriding the string processing default
-        str_processing = (samp.dtype == "object") if not self._allow_dask_on_strings else False
+        allow_dask_processing = True if self._allow_dask_on_strings else (samp.dtype != "object")
 
         if "axis" in kwds.keys():
             kwds.pop("axis")
@@ -167,7 +167,7 @@ class SeriesAccessor(_SwifterObject):
             est_apply_duration = samp_proc_est / self._SAMP_SIZE * self._obj.shape[0]
 
             # if pandas apply takes too long and not performing str processing, use dask
-            if (est_apply_duration > self._dask_threshold) and (not str_processing):
+            if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
                 return self._dask_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
@@ -248,7 +248,7 @@ class DataFrameAccessor(_SwifterObject):
         """
         samp = self._obj.iloc[: self._npartitions * 2, :]
         # check if input is string or if the user is overriding the string processing default
-        str_processing = ("object" in samp.dtypes.values) if not self._allow_dask_on_strings else False
+        allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in samp.dtypes.values)
 
         try:  # try to vectorize
             tmp_df = func(samp, *args, **kwds)
@@ -272,7 +272,7 @@ class DataFrameAccessor(_SwifterObject):
             est_apply_duration = samp_proc_est / self._SAMP_SIZE * self._obj.shape[0]
 
             # if pandas apply takes too long and not performing str processing, use dask
-            if (est_apply_duration > self._dask_threshold) and (not str_processing):
+            if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
                 if axis == 0:
                     raise NotImplementedError(
                         "Swifter cannot perform axis=0 applies on large datasets.\n"
