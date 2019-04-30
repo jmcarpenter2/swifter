@@ -1,10 +1,11 @@
 # swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner.
 
-*Current version == 0.287*
-
-[![CircleCI](https://circleci.com/gh/jmcarpenter2/swifter/tree/master.svg?style=svg)](https://circleci.com/gh/jmcarpenter2/swifter/tree/master)
-
+[![PyPI version](https://badge.fury.io/py/swifter.svg)](https://badge.fury.io/py/swifter)
+[![CircleCI](https://circleci.com/gh/jmcarpenter2/swifter.svg?style=shield)](https://circleci.com/gh/jmcarpenter2/swifter)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+![GitHub stars](https://img.shields.io/github/stars/jmcarpenter2/swifter.svg?style=popout)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/swifter.svg)
 
 To know about latest improvements, please check [changelog](docs/changelog.md).
 
@@ -52,9 +53,6 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 ![Alt text](/assets/multiprocessing_v_single_real.png?raw=true)
 ![Alt text](/assets/multiprocessing_v_single_log10.png?raw=true)
 
-## Development
-
-* The code was styled using `black -l 120` from the package black
 
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
