@@ -7,7 +7,7 @@ from psutil import cpu_count
 from dask import dataframe as dd
 
 from tqdm.autonotebook import tqdm
-from tqdm_dask_progressbar import TQDMDaskProgressBar
+from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 from numba.errors import TypingError
 
