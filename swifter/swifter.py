@@ -2,11 +2,12 @@ import timeit
 import warnings
 import pandas as pd
 
+from math import ceil
 from psutil import cpu_count
 from dask import dataframe as dd
 
 from tqdm.autonotebook import tqdm
-from .tqdm_dask_progressbar import TQDMDaskProgressBar
+from tqdm_dask_progressbar import TQDMDaskProgressBar
 
 from numba.errors import TypingError
 
@@ -25,7 +26,7 @@ class _SwifterObject:
     ):
         self._obj = pandas_obj
         self._nrows = self._obj.shape[0]
-        self._SAMP_SIZE = SAMP_SIZE if self._nrows > 25000 else int(round(self._nrows / 25))
+        self._SAMP_SIZE = SAMP_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
 
         if npartitions is None:
             self._npartitions = cpu_count() * 2
