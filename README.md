@@ -17,6 +17,12 @@ $ pip install swifter # first time installation
 $ pip install -U swifter # upgrade to latest version if already installed
 ```
 
+It is also possible to install using `conda`:
+
+```
+conda install -c conda-forge swifter 
+```
+
 and then import into your code along with pandas using:
 ```
 import pandas as pd
