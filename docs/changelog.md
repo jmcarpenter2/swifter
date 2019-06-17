@@ -1,6 +1,9 @@
 # Changelog
 
-## Versino 0.287
+## Versions 0.288 and 0.289
+Very minor bug fixes for edge cases, e.g. KeyError for applying on a dataframe with a dictionary as a nested element
+
+## Version 0.287
 Fixed bugs with rolling apply. Added unit test coverage.
 
 ## Version 0.286

@@ -1,4 +1,4 @@
-# swifter [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Enjoying%20swifter%20optimized%20processing&url=https://www.github.com/jmcarpenter2/swifter&via=jcarpenter542&hashtags=python,pandas,parallel-processing,dask)
+# swifter
 A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner.
 
 [![PyPI version](https://badge.fury.io/py/swifter.svg)](https://badge.fury.io/py/swifter)
