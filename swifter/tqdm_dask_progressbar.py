@@ -24,7 +24,9 @@ class TQDMDaskProgressBar(Callback, object):
         self.states = ["ready", "waiting", "running", "finished"]
 
     def _start_state(self, dsk, state):
-        self._tqdm = tqdm(total=sum(len(state[k]) for k in self.states), **self.tqdm_args)
+        kwargs = self.tqdm_args.copy()
+        kwargs['total'] = sum(len(state[k]) for k in self.states)
+        self._tqdm = tqdm(**kwargs)
 
     def _posttask(self, key, result, dsk, state, worker_id):
         self._tqdm.update(1)
