@@ -22,6 +22,7 @@ class _SwifterObject:
         dask_threshold=1,
         scheduler="processes",
         progress_bar=True,
+        progress_bar_desc=None,
         allow_dask_on_strings=False,
     ):
         self._obj = pandas_obj
@@ -35,6 +36,7 @@ class _SwifterObject:
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
         self._progress_bar = progress_bar
+        self._progress_bar_desc = progress_bar_desc
         self._allow_dask_on_strings = allow_dask_on_strings
 
     def set_npartitions(self, npartitions=None):
@@ -62,11 +64,12 @@ class _SwifterObject:
         self._scheduler = scheduler
         return self
 
-    def progress_bar(self, enable=True):
+    def progress_bar(self, enable=True, desc=None):
         """
         Turn on/off the progress bar
         """
         self._progress_bar = enable
+        self._progress_bar_desc = desc
         return self
 
     def allow_dask_on_strings(self, enable=True):
@@ -89,7 +92,15 @@ class _SwifterObject:
             "axis": axis,
             "closed": closed,
         }
-        return Rolling(self._obj, self._npartitions, self._dask_threshold, self._scheduler, self._progress_bar, **kwds)
+        return Rolling(
+            self._obj,
+            self._npartitions,
+            self._dask_threshold,
+            self._scheduler,
+            self._progress_bar,
+            self._progress_bar_desc,
+            **kwds
+        )
 
 
 @pd.api.extensions.register_series_accessor("swifter")
@@ -111,7 +122,7 @@ class SeriesAccessor(_SwifterObject):
             )
             assert tmp_df.equals(meta)
             if self._progress_bar:
-                with TQDMDaskProgressBar(desc="Dask Apply"):
+                with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
                         dd.from_pandas(self._obj, npartitions=self._npartitions)
                         .map_partitions(func, *args, meta=meta, **kwds)
@@ -125,7 +136,7 @@ class SeriesAccessor(_SwifterObject):
                 )
         except (AssertionError, AttributeError, ValueError, TypeError, KeyError):
             if self._progress_bar:
-                with TQDMDaskProgressBar(desc="Dask Apply"):
+                with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
                         dd.from_pandas(self._obj, npartitions=self._npartitions)
                         .apply(lambda x: func(x, *args, **kwds), convert_dtype=convert_dtype, meta=meta)
@@ -173,7 +184,7 @@ class SeriesAccessor(_SwifterObject):
                 return self._dask_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
-                    tqdm.pandas(desc="Pandas Apply")
+                    tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                     return self._obj.progress_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 else:
                     return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
@@ -207,7 +218,7 @@ class DataFrameAccessor(_SwifterObject):
             )
             assert tmp_df.equals(meta)
             if self._progress_bar:
-                with TQDMDaskProgressBar(desc="Dask Apply"):
+                with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
                         dd.from_pandas(self._obj, npartitions=self._npartitions)
                         .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
@@ -221,7 +232,7 @@ class DataFrameAccessor(_SwifterObject):
                 )
         except (AssertionError, AttributeError, ValueError, TypeError, KeyError):
             if self._progress_bar:
-                tqdm.pandas(desc="Pandas Apply")
+                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                 return self._obj.progress_apply(
                     func,
                     axis=axis,
@@ -285,7 +296,7 @@ class DataFrameAccessor(_SwifterObject):
                 return self._dask_apply(func, axis, broadcast, raw, reduce, result_type, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
-                    tqdm.pandas(desc="Pandas Apply")
+                    tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                     return self._obj.progress_apply(
                         func,
                         axis=axis,
@@ -317,9 +328,12 @@ class Transformation(_SwifterObject):
         dask_threshold=1,
         scheduler="processes",
         progress_bar=True,
+        progress_bar_desc=None,
         allow_dask_on_strings=False,
     ):
-        super().__init__(obj, npartitions, dask_threshold, scheduler, progress_bar, allow_dask_on_strings)
+        super().__init__(
+            obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
+        )
         self._samp_pd = obj.iloc[: self._SAMP_SIZE]
         self._obj_pd = obj
         self._obj_dd = dd.from_pandas(obj, npartitions=npartitions)
@@ -333,7 +347,7 @@ class Transformation(_SwifterObject):
 
     def _dask_apply(self, func, *args, **kwds):
         if self._progress_bar:
-            with TQDMDaskProgressBar(desc="Dask Apply"):
+            with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                 return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
         else:
             return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
@@ -354,15 +368,24 @@ class Transformation(_SwifterObject):
             return self._dask_apply(func, *args, **kwds)
         else:  # use pandas
             if self._progress_bar:
-                tqdm.pandas(desc="Pandas Apply")
+                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                 return self._obj_pd.progress_apply(func, *args, **kwds)
             else:
                 return self._obj_pd.apply(func, *args, **kwds)
 
 
 class Rolling(Transformation):
-    def __init__(self, obj, npartitions=None, dask_threshold=1, scheduler="processes", progress_bar=True, **kwds):
-        super(Rolling, self).__init__(obj, npartitions, dask_threshold, scheduler, progress_bar)
+    def __init__(
+        self,
+        obj,
+        npartitions=None,
+        dask_threshold=1,
+        scheduler="processes",
+        progress_bar=True,
+        progress_bar_desc=None,
+        **kwds
+    ):
+        super(Rolling, self).__init__(obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc)
         self._samp_pd = self._samp_pd.rolling(**kwds)
         self._obj_pd = self._obj_pd.rolling(**kwds)
         kwds.pop("on")
