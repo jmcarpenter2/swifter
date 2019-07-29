@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.290
+df.swifter.progress_bar(desc="<Your description>") now allows for a custom description.
+
 ## Versions 0.288 and 0.289
 Very minor bug fixes for edge cases, e.g. KeyError for applying on a dataframe with a dictionary as a nested element
 
