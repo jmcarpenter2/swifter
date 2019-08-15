@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.292
+Fix known security vulnerability in parso <= 0.4.0 by requiring parso > 0.4.0
+
 ## Version 0.291
 Change import from tqdm.auto instead of tqdm.autenook. Less warnings will show when importing swifter.
 
