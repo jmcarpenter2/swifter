@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.291
+Change import from tqdm.auto instead of tqdm.autenook. Less warnings will show when importing swifter.
+
 ## Version 0.290
 df.swifter.progress_bar(desc="<Your description>") now allows for a custom description.
 
