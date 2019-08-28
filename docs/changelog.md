@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.293
+Require tqdm>=4.33.0, which resolves a bug with the progress bar that stems from pandas itself.
+
 ## Version 0.292
 Fix known security vulnerability in parso <= 0.4.0 by requiring parso > 0.4.0
 
