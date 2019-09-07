@@ -11,7 +11,8 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 from numba.errors import TypingError
 
-SAMP_SIZE = 1000
+SAMPLE_SIZE = 1000
+N_REPEATS = 3
 
 
 class _SwifterObject:
@@ -27,7 +28,7 @@ class _SwifterObject:
     ):
         self._obj = pandas_obj
         self._nrows = self._obj.shape[0]
-        self._SAMP_SIZE = SAMP_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
+        self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
 
         if npartitions is None:
             self._npartitions = cpu_count() * 2
@@ -38,6 +39,11 @@ class _SwifterObject:
         self._progress_bar = progress_bar
         self._progress_bar_desc = progress_bar_desc
         self._allow_dask_on_strings = allow_dask_on_strings
+
+    @staticmethod
+    def _validate_apply(expr, error_message):
+        if not expr:
+            raise ValueError(error_message)
 
     def set_npartitions(self, npartitions=None):
         """
@@ -107,20 +113,22 @@ class _SwifterObject:
 class SeriesAccessor(_SwifterObject):
     def _wrapped_apply(self, func, convert_dtype=True, args=(), **kwds):
         def wrapped():
-            self._obj.iloc[: self._SAMP_SIZE].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+            self._obj.iloc[: self._SAMPLE_SIZE].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
         return wrapped
 
     def _dask_apply(self, func, convert_dtype, *args, **kwds):
-        samp = self._obj.iloc[: self._npartitions * 2]
-        meta = samp.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+        sample = self._obj.iloc[: self._npartitions * 2]
+        meta = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
         try:
             tmp_df = (
-                dd.from_pandas(samp, npartitions=self._npartitions)
+                dd.from_pandas(sample, npartitions=self._npartitions)
                 .map_partitions(func, *args, meta=meta, **kwds)
                 .compute(scheduler=self._scheduler)
             )
-            assert tmp_df.equals(meta)
+            self._validate_apply(
+                tmp_df.equals(meta), error_message="Dask map-partitions sample does not match pandas apply sample."
+            )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
@@ -134,7 +142,7 @@ class SeriesAccessor(_SwifterObject):
                     .map_partitions(func, *args, meta=meta, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AssertionError, AttributeError, ValueError, TypeError, KeyError):
+        except (AttributeError, ValueError, TypeError, KeyError):
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
@@ -153,20 +161,22 @@ class SeriesAccessor(_SwifterObject):
         """
         Apply the function to the Series using swifter
         """
-        samp = self._obj.iloc[: self._npartitions * 2]
+        sample = self._obj.iloc[: self._npartitions * 2]
         # check if input is string or if the user is overriding the string processing default
-        allow_dask_processing = True if self._allow_dask_on_strings else (samp.dtype != "object")
+        allow_dask_processing = True if self._allow_dask_on_strings else (sample.dtype != "object")
 
         if "axis" in kwds.keys():
             kwds.pop("axis")
             warnings.warn("Axis keyword not necessary because applying on a Series.")
 
         try:  # try to vectorize
-            tmp_df = func(samp, *args, **kwds)
-            assert samp.apply(func, convert_dtype=convert_dtype, args=args, **kwds).equals(tmp_df)
+            tmp_df = func(sample, *args, **kwds)
+            self._validate_apply(
+                sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds).equals(tmp_df),
+                error_message="Vectorized function sample doesn't match pandas apply sample.",
+            )
             return func(self._obj, *args, **kwds)
         except (
-            AssertionError,
             AttributeError,
             ValueError,
             TypeError,
@@ -174,10 +184,9 @@ class SeriesAccessor(_SwifterObject):
             KeyError,
         ):  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
-            n_repeats = 3
-            timed = timeit.timeit(wrapped, number=n_repeats)
-            samp_proc_est = timed / n_repeats
-            est_apply_duration = samp_proc_est / self._SAMP_SIZE * self._obj.shape[0]
+            timed = timeit.timeit(wrapped, number=N_REPEATS)
+            sample_proc_est = timed / N_REPEATS
+            est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
 
             # if pandas apply takes too long and not performing str processing, use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
@@ -194,15 +203,15 @@ class SeriesAccessor(_SwifterObject):
 class DataFrameAccessor(_SwifterObject):
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
-            self._obj.iloc[: self._SAMP_SIZE, :].apply(
+            self._obj.iloc[: self._SAMPLE_SIZE, :].apply(
                 func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
             )
 
         return wrapped
 
     def _dask_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, *args, **kwds):
-        samp = self._obj.iloc[: self._npartitions * 2, :]
-        meta = samp.apply(
+        sample = self._obj.iloc[: self._npartitions * 2, :]
+        meta = sample.apply(
             func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
         )
         try:
@@ -212,11 +221,13 @@ class DataFrameAccessor(_SwifterObject):
                 result_type = "reduce"
 
             tmp_df = (
-                dd.from_pandas(samp, npartitions=self._npartitions)
+                dd.from_pandas(sample, npartitions=self._npartitions)
                 .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
                 .compute(scheduler=self._scheduler)
             )
-            assert tmp_df.equals(meta)
+            self._validate_apply(
+                tmp_df.equals(meta), error_message="Dask apply sample does not match pandas apply sample."
+            )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
@@ -230,47 +241,42 @@ class DataFrameAccessor(_SwifterObject):
                     .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AssertionError, AttributeError, ValueError, TypeError, KeyError):
+        except (AttributeError, ValueError, TypeError, KeyError):
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                return self._obj.progress_apply(
-                    func,
-                    axis=axis,
-                    broadcast=broadcast,
-                    raw=raw,
-                    reduce=reduce,
-                    result_type=result_type,
-                    args=args,
-                    **kwds
-                )
+                apply_func = self._obj.progress_apply
             else:
-                return self._obj.apply(
-                    func,
-                    axis=axis,
-                    broadcast=broadcast,
-                    raw=raw,
-                    reduce=reduce,
-                    result_type=result_type,
-                    args=args,
-                    **kwds
-                )
+                apply_func = self._obj.apply
+
+            return apply_func(
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
 
     def apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         """
         Apply the function to the DataFrame using swifter
         """
-        samp = self._obj.iloc[: self._npartitions * 2, :]
+        sample = self._obj.iloc[: self._npartitions * 2, :]
         # check if input is string or if the user is overriding the string processing default
-        allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in samp.dtypes.values)
+        allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
 
         try:  # try to vectorize
-            tmp_df = func(samp, *args, **kwds)
-            assert samp.apply(
-                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
-            ).equals(tmp_df)
+            tmp_df = func(sample, *args, **kwds)
+            self._validate_apply(
+                sample.apply(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
+                ).equals(tmp_df),
+                error_message="Vectorized function sample does not match pandas apply sample.",
+            )
             return func(self._obj, *args, **kwds)
         except (
-            AssertionError,
             AttributeError,
             ValueError,
             TypeError,
@@ -280,10 +286,9 @@ class DataFrameAccessor(_SwifterObject):
             wrapped = self._wrapped_apply(
                 func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
             )
-            n_repeats = 3
-            timed = timeit.timeit(wrapped, number=n_repeats)
-            samp_proc_est = timed / n_repeats
-            est_apply_duration = samp_proc_est / self._SAMP_SIZE * self._obj.shape[0]
+            timed = timeit.timeit(wrapped, number=N_REPEATS)
+            sample_proc_est = timed / N_REPEATS
+            est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
 
             # if pandas apply takes too long and not performing str processing, use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
@@ -297,27 +302,20 @@ class DataFrameAccessor(_SwifterObject):
             else:  # use pandas
                 if self._progress_bar:
                     tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                    return self._obj.progress_apply(
-                        func,
-                        axis=axis,
-                        broadcast=broadcast,
-                        raw=raw,
-                        reduce=reduce,
-                        result_type=result_type,
-                        args=args,
-                        **kwds
-                    )
+                    apply_func = self._obj.progress_apply
                 else:
-                    return self._obj.apply(
-                        func,
-                        axis=axis,
-                        broadcast=broadcast,
-                        raw=raw,
-                        reduce=reduce,
-                        result_type=result_type,
-                        args=args,
-                        **kwds
-                    )
+                    apply_func = self._obj.apply
+
+                return apply_func(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
+                )
 
 
 class Transformation(_SwifterObject):
@@ -334,14 +332,14 @@ class Transformation(_SwifterObject):
         super().__init__(
             obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
         )
-        self._samp_pd = obj.iloc[: self._SAMP_SIZE]
+        self._sample_pd = obj.iloc[: self._SAMPLE_SIZE]
         self._obj_pd = obj
         self._obj_dd = dd.from_pandas(obj, npartitions=npartitions)
         self._nrows = obj.shape[0]
 
     def _wrapped_apply(self, func, *args, **kwds):
         def wrapped():
-            self._samp_pd.apply(func, *args, **kwds)
+            self._sample_pd.apply(func, *args, **kwds)
 
         return wrapped
 
@@ -358,10 +356,9 @@ class Transformation(_SwifterObject):
         """
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
-        n_repeats = 3
-        timed = timeit.timeit(wrapped, number=n_repeats)
-        samp_proc_est = timed / n_repeats
-        est_apply_duration = samp_proc_est / self._SAMP_SIZE * self._nrows
+        timed = timeit.timeit(wrapped, number=N_REPEATS)
+        sample_proc_est = timed / N_REPEATS
+        est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._nrows
 
         # if pandas apply takes too long, use dask
         if est_apply_duration > self._dask_threshold:
@@ -386,7 +383,7 @@ class Rolling(Transformation):
         **kwds
     ):
         super(Rolling, self).__init__(obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc)
-        self._samp_pd = self._samp_pd.rolling(**kwds)
+        self._sample_pd = self._sample_pd.rolling(**kwds)
         self._obj_pd = self._obj_pd.rolling(**kwds)
         kwds.pop("on")
         kwds.pop("closed")
