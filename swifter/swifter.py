@@ -72,7 +72,7 @@ class _SwifterObject:
 
     def progress_bar(self, enable=True, desc=None):
         """
-        Turn on/off the progress bar
+        Turn on/off the progress bar, and optionally add a custom description
         """
         self._progress_bar = enable
         self._progress_bar_desc = desc
@@ -121,6 +121,7 @@ class SeriesAccessor(_SwifterObject):
         sample = self._obj.iloc[: self._npartitions * 2]
         meta = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
         try:
+            # check that the dask map partitions matches the pandas apply
             tmp_df = (
                 dd.from_pandas(sample, npartitions=self._npartitions)
                 .map_partitions(func, *args, meta=meta, **kwds)
@@ -143,6 +144,7 @@ class SeriesAccessor(_SwifterObject):
                     .compute(scheduler=self._scheduler)
                 )
         except (AttributeError, ValueError, TypeError, KeyError):
+            # if map partitions doesn't match pandas apply, we can use dask apply, but it will be a bit slower
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
@@ -188,7 +190,7 @@ class SeriesAccessor(_SwifterObject):
             sample_proc_est = timed / N_REPEATS
             est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
 
-            # if pandas apply takes too long and not performing str processing, use dask
+            # if pandas sample apply takes too long and not performing str processing, use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
                 return self._dask_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
@@ -220,6 +222,7 @@ class DataFrameAccessor(_SwifterObject):
             elif reduce:
                 result_type = "reduce"
 
+            # check that the dask apply matches the pandas apply
             tmp_df = (
                 dd.from_pandas(sample, npartitions=self._npartitions)
                 .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
@@ -242,6 +245,7 @@ class DataFrameAccessor(_SwifterObject):
                     .compute(scheduler=self._scheduler)
                 )
         except (AttributeError, ValueError, TypeError, KeyError):
+            # if dask apply doesn't match pandas apply, fallback to pandas
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                 apply_func = self._obj.progress_apply
@@ -290,7 +294,7 @@ class DataFrameAccessor(_SwifterObject):
             sample_proc_est = timed / N_REPEATS
             est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
 
-            # if pandas apply takes too long and not performing str processing, use dask
+            # if pandas sample apply takes too long and not performing str processing, use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
                 if axis == 0:
                     raise NotImplementedError(
@@ -360,7 +364,7 @@ class Transformation(_SwifterObject):
         sample_proc_est = timed / N_REPEATS
         est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._nrows
 
-        # if pandas apply takes too long, use dask
+        # if pandas sample apply takes too long, use dask
         if est_apply_duration > self._dask_threshold:
             return self._dask_apply(func, *args, **kwds)
         else:  # use pandas
