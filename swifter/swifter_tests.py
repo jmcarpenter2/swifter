@@ -119,6 +119,7 @@ class TestSwifter(unittest.TestCase):
                 + "df = pd.DataFrame({'x': np.random.normal(size=1000)}); "
                 + "df.swifter.apply(lambda x: print(x.values))",
             ],
+            stderr=subprocess.STDOUT,
             shell=True,
         )
         self.assertEqual(len(print_messages), 1)
