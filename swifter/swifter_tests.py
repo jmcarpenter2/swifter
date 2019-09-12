@@ -110,8 +110,17 @@ class TestSwifter(unittest.TestCase):
         self.assertNotEqual(before, actual)
 
     def test_stdout_redirected(self):
-        df = pd.DataFrame({"x": np.random.normal(size=1000)})
-        print_messages = subprocess.check_output(df.swifter.apply(lambda x: print(x.values), shell=True))
+
+        print_messages = subprocess.check_output(
+            [
+                "python",
+                "-c",
+                "import pandas as pd; import numpy as np; import swifter; "
+                + "df = pd.DataFrame({'x': np.random.normal(size=1000)}); "
+                + "df.swifter.apply(lambda x: print(x.values))",
+            ],
+            shell=True,
+        )
         self.assertEqual(len(print_messages), 1)
 
     def test_vectorized_math_apply_on_large_series(self):
