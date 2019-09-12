@@ -17,7 +17,7 @@ def get_stdout(cmd):
     while True:
         line = p.stdout.readline()
         stdout.append(line)
-        if line == '' and p.poll() is not None:
+        if line == "" and p.poll() is not None:
             break
     return stdout
 
