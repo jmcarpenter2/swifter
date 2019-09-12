@@ -121,6 +121,7 @@ class TestSwifter(unittest.TestCase):
             ],
             stderr=subprocess.STDOUT,
             shell=True,
+            universal_newlines=True,
         )
         self.assertEqual(len(print_messages), 1)
 
