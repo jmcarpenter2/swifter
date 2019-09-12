@@ -9,19 +9,6 @@ import swifter
 print(f"Version {swifter.__version__}")
 
 
-def get_stdout(cmd):
-    """from http://blog.kagesenshi.org/2008/02/teeing-python-subprocesspopen-output.html
-    """
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    stdout = []
-    while True:
-        line = p.stdout.readline()
-        stdout.append(line)
-        if line == "" and p.poll() is not None:
-            break
-    return stdout
-
-
 def math_vec_square(x):
     return x ** 2
 
@@ -124,7 +111,7 @@ class TestSwifter(unittest.TestCase):
 
     def test_stdout_redirected(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000)})
-        print_messages = get_stdout(df.swifter.apply(lambda x: print(x.values)))
+        print_messages = subprocess.check_output(df.swifter.apply(lambda x: print(x.values), shell=True))
         self.assertEqual(len(print_messages), 1)
 
     def test_vectorized_math_apply_on_large_series(self):
