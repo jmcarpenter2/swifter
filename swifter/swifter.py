@@ -23,7 +23,7 @@ def suppress_stdout_stderr():
     A context manager that redirects stdout and stderr to devnull
     Used for avoiding repeated prints of the data during sample/test applies of Swifter
     """
-    with open(devnull, 'w') as fnull:
+    with open(devnull, "w") as fnull:
         with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
             yield (err, out)
 
@@ -224,7 +224,14 @@ class DataFrameAccessor(_SwifterObject):
         def wrapped():
             with suppress_stdout_stderr():
                 self._obj.iloc[: self._SAMPLE_SIZE, :].apply(
-                    func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
                 )
 
         return wrapped
