@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.295
+## Version 0.296
 Context Manager to suppress print statements during the sample/test applies. Now if a print is part of the function that is applied, the only print that will occur is the final apply's print.
 
 ## Version 0.294
