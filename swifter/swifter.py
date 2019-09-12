@@ -5,6 +5,8 @@ import pandas as pd
 from math import ceil
 from psutil import cpu_count
 from dask import dataframe as dd
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from os import devnull
 
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
@@ -13,6 +15,17 @@ from numba.errors import TypingError
 
 SAMPLE_SIZE = 1000
 N_REPEATS = 3
+
+
+@contextmanager
+def suppress_stdout_stderr():
+    """
+    A context manager that redirects stdout and stderr to devnull
+    Used for avoiding repeated prints of the data during sample/test applies of Swifter
+    """
+    with open(devnull, "w") as fnull:
+        with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
+            yield (err, out)
 
 
 class _SwifterObject:
@@ -113,23 +126,26 @@ class _SwifterObject:
 class SeriesAccessor(_SwifterObject):
     def _wrapped_apply(self, func, convert_dtype=True, args=(), **kwds):
         def wrapped():
-            self._obj.iloc[: self._SAMPLE_SIZE].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+            with suppress_stdout_stderr():
+                self._obj.iloc[: self._SAMPLE_SIZE].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
         return wrapped
 
     def _dask_apply(self, func, convert_dtype, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2]
-        meta = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+        with suppress_stdout_stderr():
+            meta = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
         try:
             # check that the dask map partitions matches the pandas apply
-            tmp_df = (
-                dd.from_pandas(sample, npartitions=self._npartitions)
-                .map_partitions(func, *args, meta=meta, **kwds)
-                .compute(scheduler=self._scheduler)
-            )
-            self._validate_apply(
-                tmp_df.equals(meta), error_message="Dask map-partitions sample does not match pandas apply sample."
-            )
+            with suppress_stdout_stderr():
+                tmp_df = (
+                    dd.from_pandas(sample, npartitions=self._npartitions)
+                    .map_partitions(func, *args, meta=meta, **kwds)
+                    .compute(scheduler=self._scheduler)
+                )
+                self._validate_apply(
+                    tmp_df.equals(meta), error_message="Dask map-partitions sample does not match pandas apply sample."
+                )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
@@ -172,11 +188,12 @@ class SeriesAccessor(_SwifterObject):
             warnings.warn("Axis keyword not necessary because applying on a Series.")
 
         try:  # try to vectorize
-            tmp_df = func(sample, *args, **kwds)
-            self._validate_apply(
-                sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds).equals(tmp_df),
-                error_message="Vectorized function sample doesn't match pandas apply sample.",
-            )
+            with suppress_stdout_stderr():
+                tmp_df = func(sample, *args, **kwds)
+                self._validate_apply(
+                    sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds).equals(tmp_df),
+                    error_message="Vectorized function sample doesn't match pandas apply sample.",
+                )
             return func(self._obj, *args, **kwds)
         except (
             AttributeError,
@@ -205,32 +222,41 @@ class SeriesAccessor(_SwifterObject):
 class DataFrameAccessor(_SwifterObject):
     def _wrapped_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds):
         def wrapped():
-            self._obj.iloc[: self._SAMPLE_SIZE, :].apply(
-                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
-            )
+            with suppress_stdout_stderr():
+                self._obj.iloc[: self._SAMPLE_SIZE, :].apply(
+                    func,
+                    axis=axis,
+                    broadcast=broadcast,
+                    raw=raw,
+                    reduce=reduce,
+                    result_type=result_type,
+                    args=args,
+                    **kwds
+                )
 
         return wrapped
 
     def _dask_apply(self, func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2, :]
-        meta = sample.apply(
-            func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
-        )
+        with suppress_stdout_stderr():
+            meta = sample.apply(
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
         try:
             if broadcast:
                 result_type = "broadcast"
             elif reduce:
                 result_type = "reduce"
-
-            # check that the dask apply matches the pandas apply
-            tmp_df = (
-                dd.from_pandas(sample, npartitions=self._npartitions)
-                .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
-                .compute(scheduler=self._scheduler)
-            )
-            self._validate_apply(
-                tmp_df.equals(meta), error_message="Dask apply sample does not match pandas apply sample."
-            )
+            with suppress_stdout_stderr():
+                # check that the dask apply matches the pandas apply
+                tmp_df = (
+                    dd.from_pandas(sample, npartitions=self._npartitions)
+                    .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
+                    .compute(scheduler=self._scheduler)
+                )
+                self._validate_apply(
+                    tmp_df.equals(meta), error_message="Dask apply sample does not match pandas apply sample."
+                )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return (
@@ -265,20 +291,21 @@ class DataFrameAccessor(_SwifterObject):
         allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
 
         try:  # try to vectorize
-            tmp_df = func(sample, *args, **kwds)
-            self._validate_apply(
-                sample.apply(
-                    func,
-                    axis=axis,
-                    broadcast=broadcast,
-                    raw=raw,
-                    reduce=reduce,
-                    result_type=result_type,
-                    args=args,
-                    **kwds
-                ).equals(tmp_df),
-                error_message="Vectorized function sample does not match pandas apply sample.",
-            )
+            with suppress_stdout_stderr():
+                tmp_df = func(sample, *args, **kwds)
+                self._validate_apply(
+                    sample.apply(
+                        func,
+                        axis=axis,
+                        broadcast=broadcast,
+                        raw=raw,
+                        reduce=reduce,
+                        result_type=result_type,
+                        args=args,
+                        **kwds
+                    ).equals(tmp_df),
+                    error_message="Vectorized function sample does not match pandas apply sample.",
+                )
             return func(self._obj, *args, **kwds)
         except (
             AttributeError,
@@ -343,7 +370,8 @@ class Transformation(_SwifterObject):
 
     def _wrapped_apply(self, func, *args, **kwds):
         def wrapped():
-            self._sample_pd.apply(func, *args, **kwds)
+            with suppress_stdout_stderr():
+                self._sample_pd.apply(func, *args, **kwds)
 
         return wrapped
 

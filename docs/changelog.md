@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.295
+Context Manager to suppress print statements during the sample/test applies. Now if a print is part of the function that is applied, the only print that will occur is the final apply's print.
+
 ## Version 0.294
 Made several code simplifications, thanks to @ianozvsald's suggestions. One of these code changes avoids the issue where assertions are ignored according to python -O flag, which would effectively break swifter.
 
