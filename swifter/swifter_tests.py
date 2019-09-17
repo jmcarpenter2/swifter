@@ -112,7 +112,6 @@ class TestSwifter(unittest.TestCase):
         self.assertNotEqual(before, actual)
 
     def test_stdout_redirected(self):
-
         print_messages = subprocess.check_output(
             [
                 "python",
@@ -124,6 +123,7 @@ class TestSwifter(unittest.TestCase):
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
+        # 171 is the correct number of expected lines b/c of universal_newlines flag
         self.assertEqual(len(print_messages.split("\n")), 171)
 
     def test_vectorized_math_apply_on_large_series(self):
