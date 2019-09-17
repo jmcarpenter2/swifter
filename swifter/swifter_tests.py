@@ -1,12 +1,14 @@
 import unittest
 import subprocess
 import time
+import logging
 
 import numpy as np
 import pandas as pd
 import swifter
 
-print(f"Version {swifter.__version__}")
+logging.getLogger(__name__)
+logging.info(f"Version {swifter.__version__}")
 
 
 def math_vec_square(x):
@@ -123,7 +125,8 @@ class TestSwifter(unittest.TestCase):
             shell=True,
             universal_newlines=True,
         )
-        self.assertEqual(print_messages, 1)
+        logging.info(print_messages)
+        self.assertEqual(len(print_messages.split("\n")), 2)
 
     def test_vectorized_math_apply_on_large_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
