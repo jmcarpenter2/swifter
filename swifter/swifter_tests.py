@@ -122,9 +122,9 @@ class TestSwifter(unittest.TestCase):
                 + "df.swifter.apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
+            universal_newlines=True,
         )
-        logging.info(print_messages)
-        self.assertEqual(len(print_messages.split("\n")), 3)
+        self.assertEqual(len(print_messages.split("\n")), 171)
 
     def test_vectorized_math_apply_on_large_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
