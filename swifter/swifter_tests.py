@@ -121,10 +121,11 @@ class TestSwifter(unittest.TestCase):
                 + "df.swifter.apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
-            universal_newlines=True,
+            #universal_newlines=True,
         )
-        # 171 is the correct number of expected lines b/c of universal_newlines flag
-        self.assertEqual(len(print_messages.split("\n")), 171)
+        # 3 is the correct number of expected lines
+        logging.info(print_messages.decode("utf-8"))
+        self.assertEqual(len(print_messages.decode("utf-8").split("\n")), 3)
 
     def test_vectorized_math_apply_on_large_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
