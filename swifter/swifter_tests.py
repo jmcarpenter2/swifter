@@ -121,7 +121,7 @@ class TestSwifter(unittest.TestCase):
                 + "df.swifter.apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
-            #universal_newlines=True,
+            # universal_newlines=True,
         )
         # 3 is the correct number of expected lines
         logging.info(print_messages.decode("utf-8"))
