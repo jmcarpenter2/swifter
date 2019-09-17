@@ -122,7 +122,7 @@ class TestSwifter(unittest.TestCase):
                 + "df.swifter.apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
-            shell=True,
+            #shell=True,
             universal_newlines=True,
         )
         logging.info(print_messages)
