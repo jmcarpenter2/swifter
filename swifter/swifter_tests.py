@@ -117,7 +117,7 @@ class TestSwifter(unittest.TestCase):
                 "python",
                 "-c",
                 "import pandas as pd; import numpy as np; import swifter; "
-                + "df = pd.DataFrame({'x': np.random.normal(size=1000)}); "
+                + "df = pd.DataFrame({'x': np.random.normal(size=4)}); "
                 + "df.swifter.apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
