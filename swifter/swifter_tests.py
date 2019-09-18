@@ -1,11 +1,14 @@
 import unittest
+import subprocess
 import time
+import logging
 
 import numpy as np
 import pandas as pd
 import swifter
 
-print(f"Version {swifter.__version__}")
+logging.getLogger(__name__)
+logging.info(f"Version {swifter.__version__}")
 
 
 def math_vec_square(x):
@@ -107,6 +110,19 @@ class TestSwifter(unittest.TestCase):
         actual = swifter_df._allow_dask_on_strings
         self.assertEqual(actual, expected)
         self.assertNotEqual(before, actual)
+
+    def test_stdout_redirected(self):
+        print_messages = subprocess.check_output(
+            [
+                "python",
+                "-c",
+                "import pandas as pd; import numpy as np; import swifter; "
+                + "df = pd.DataFrame({'x': np.random.normal(size=4)}); "
+                + "df.swifter.progress_bar(enable=False).apply(lambda x: print(x.values))",
+            ],
+            stderr=subprocess.STDOUT,
+        )
+        self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
     def test_vectorized_math_apply_on_large_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
