@@ -1,5 +1,14 @@
 # Documentation
 
+## Important Notes
+
+1. Please upgrade your version of pandas, as the pandas extension api used in this module is a recent addition to pandas.
+
+2. Do not use swifter to apply a function that modifies external variables. Under the hood, swifter does sample applies to optimize performance. These sample applies will modify the external variable in addition to the final apply. Thus, you will end up with an erroneously modified external variable.
+
+3. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules. 
+
+
 ## 1. `pandas.Series.swifter.apply`
 
 Efficiently apply any function to a pandas series in the fastest available manner
