@@ -89,13 +89,13 @@ def pandas.DataFrame.swifter.rolling(window, min_periods=None, center=False, win
 
 Enable or disable the TQDM progress bar by setting the enable parameter to True/False, respectively. You can also specify a custom description.
 
+Note: It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules. 
+
 ```python
 def pandas.DataFrame.swifter.progress_bar(enable=True, desc=None)
 ```
 
 For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, without the TQDM progress bar.
-
-Note: It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules. 
 
 ```python
 df.swifter.progress_bar(False).apply(lambda x: x+1)
