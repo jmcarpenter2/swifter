@@ -464,7 +464,7 @@ class Rolling(Transformation):
 
     def _dask_apply(self, func, *args, **kwds):
         try:
-            # check that the dask resampler apply matches the pandas apply
+            # check that the dask rolling apply matches the pandas apply
             with suppress_stdout_stderr():
                 tmp_df = (
                     dd.from_pandas(self._sample_original, npartitions=self._npartitions)
