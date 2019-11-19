@@ -481,7 +481,7 @@ class Rolling(Transformation):
                     return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
             else:
                 return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
-        except (AttributeError, ValueError, TypeError, KeyError) as e:
+        except (AttributeError, ValueError, TypeError, KeyError):
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                 return self._obj_pd.progress_apply(func, *args, **kwds)
@@ -537,7 +537,7 @@ class Resampler(Transformation):
                     return self._obj_dd.agg(func, *args, **kwds).compute(scheduler=self._scheduler)
             else:
                 return self._obj_dd.agg(func, *args, **kwds).compute(scheduler=self._scheduler)
-        except (AttributeError, ValueError, TypeError, KeyError) as e:
+        except (AttributeError, ValueError, TypeError, KeyError):
             # use pandas -- no progress_apply available for resampler objects
             return self._obj_pd.apply(func, *args, **kwds)
 
