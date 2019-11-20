@@ -21,7 +21,7 @@ jobs:
       - run:
           name: Unit tests
           command: |
-            pip install pipenv && pipenv install --dev && pip install coverage && coverage run -m unittest swifter/swifter_tests.py
+            pip install pipenv && pipenv install --dev && pip install coverage && pipenv run coverage run -m unittest swifter/swifter_tests.py
       - run:
           name: Codecov report
           command: |
