@@ -25,7 +25,10 @@ jobs:
       - run:
           name: Codecov report
           command: |
-            pip install codecov && codecov
+            pip install coverage && coverage run -m unittest swifter/swifter_tests.py && coverage report -i && coverage html -i
+            pip install codecov && codecov -t ${CODECOV_TOKEN}
+      - store_artifacts:
+          path: htmlcov
 
 workflows:
   version: 2
