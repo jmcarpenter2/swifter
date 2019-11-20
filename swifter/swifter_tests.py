@@ -223,12 +223,12 @@ class TestSwifter(unittest.TestCase):
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("1d").apply(sum)
+        pd_val = df.rolling("3T").apply(sum)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("1d").progress_bar(desc="Vec math apply ~ Rolling DF").apply(sum)
+        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Vec math apply ~ Rolling DF").apply(sum)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -241,12 +241,12 @@ class TestSwifter(unittest.TestCase):
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("1d").apply(math_foo)
+        pd_val = df.rolling("3T").apply(math_foo)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("1d").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo)
+        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
