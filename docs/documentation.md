@@ -32,7 +32,16 @@ def pandas.Series.swifter.apply(func, convert_dtype=True, args=(), **kwds)
 Efficiently apply any function to a pandas dataframe in the fastest available manner.
 
 ```python
-def pandas.DataFrame.swifter.apply(func, axis=0, broadcast=None, raw=False, reduce=None, result_type=None, args=(), **kwds)
+def pandas.DataFrame.swifter.apply(
+        func, 
+        axis=0, 
+        broadcast=None, 
+        raw=False, 
+        reduce=None, 
+        result_type=None,
+        args=(), 
+        **kwds
+    )
 ```
 
 **Parameters:**
@@ -82,10 +91,37 @@ The new dataframe/series with the function applied as quickly as possible
 Applies over a rolling object on the original series/dataframe in the fastest available manner.
 
 ```python
-def pandas.DataFrame.swifter.rolling(window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None).apply(func, *args, **kwds)
+def pandas.DataFrame.swifter.rolling(
+        window, 
+        min_periods=None, 
+        center=False, 
+        win_type=None, 
+        on=None, 
+        axis=0, 
+        closed=None
+    ).apply(func, *args, **kwds)
 ```
 
-## 4. `pandas.DataFrame.swifter.progress_bar(False).apply`
+## 4. `pandas.DataFrame.swifter.resample.apply`
+
+Applies over a resampler object on the original series/dataframe in the fastest available manner.
+
+```python
+def pandas.DataFrame.swifter.resample(
+        rule,
+        axis=0,
+        closed=None,
+        label=None,
+        convention="start",
+        kind=None,
+        loffset=None,
+        base=0,
+        on=None,
+        level=None
+    ).apply(func, *args, **kwds)
+```
+
+## 5. `pandas.DataFrame.swifter.progress_bar(False).apply`
 
 Enable or disable the TQDM progress bar by setting the enable parameter to True/False, respectively. You can also specify a custom description.
 
@@ -101,7 +137,7 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.progress_bar(False).apply(lambda x: x+1)
 ```
 
-## 5. `pandas.DataFrame.swifter.set_npartitions(npartitions=None).apply`
+## 6. `pandas.DataFrame.swifter.set_npartitions(npartitions=None).apply`
 
 Specify the number of partitions to allocate to swifter, if parallel processing is chosen to be the quickest apply.
 If npartitions=None, it defaults to cpu_count()*2
@@ -115,7 +151,7 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_npartitions(2).apply(lambda x: x+1)
 ```
 
-## 6. `pandas.DataFrame.swifter.set_dask_threshold(dask_threshold=1).apply`
+## 7. `pandas.DataFrame.swifter.set_dask_threshold(dask_threshold=1).apply`
 
 Specify the dask threshold (in seconds) for the max allowable time estimate for a pandas apply on the full dataframe
 ```python
@@ -127,7 +163,7 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_dask_threshold(dask_threshold=3).apply(lambda x: x+1)
 ```
 
-## 7. `pandas.DataFrame.swifter.set_dask_scheduler(scheduler="processes").apply`
+## 8. `pandas.DataFrame.swifter.set_dask_scheduler(scheduler="processes").apply`
 
 Set the dask scheduler
 
@@ -141,7 +177,7 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_dask_scheduler(scheduler="threads").apply(lambda x: x+1)
 ```
 
-## 8. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
+## 9. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
 
 Specify whether to allow dask to handle dataframes containing string types.  Dask can be particularly slow if you are actually manipulating strings, but if you just have a string column in your data frame this will allow dask to handle the execution.
 ```python
