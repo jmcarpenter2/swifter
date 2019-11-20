@@ -21,11 +21,11 @@ jobs:
       - run:
           name: Unit tests
           command: |
-            pip install pipenv && pipenv install --dev && pipenv run nosetests
+            pip install pipenv && pipenv install --dev && pip install coverage && coverage run -m unittest swifter/swifter_tests.py
       - run:
           name: Codecov report
           command: |
-            pip install coverage && coverage run -m unittest swifter/swifter_tests.py && coverage report -i && coverage html -i
+            coverage report -i && coverage html -i
             pip install codecov && codecov -t ${CODECOV_TOKEN}
       - store_artifacts:
           path: htmlcov
