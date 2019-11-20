@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import swifter
 
+from psutil import cpu_count
+
 logging.getLogger(__name__)
 logging.info(f"Version {swifter.__version__}")
 
@@ -58,8 +60,7 @@ class TestSwifter(unittest.TestCase):
         self.addTypeEqualityFunc(pd.DataFrame, self.assertDataFrameEqual)
 
     def test_set_npartitions(self):
-        npartitions = [None, 1000, 1001, 1002]
-        for swifter_df, expected in zip(
+        for swifter_df, set_npartitions, expected in zip(
             [
                 pd.DataFrame().swifter,
                 pd.Series().swifter,
@@ -70,10 +71,11 @@ class TestSwifter(unittest.TestCase):
                     {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
                 ).swifter.resample("3T"),
             ],
-            npartitions,
+            [None, 1000, 1001, 1002],
+            [cpu_count() * 2, 1000, 1001, 1002],
         ):
             before = swifter_df._npartitions
-            swifter_df.set_npartitions(expected)
+            swifter_df.set_npartitions(set_npartitions)
             actual = swifter_df._npartitions
             self.assertEqual(actual, expected)
             self.assertNotEqual(before, actual)
@@ -90,9 +92,9 @@ class TestSwifter(unittest.TestCase):
                 {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
             ).swifter.resample("3T"),
         ]:
-            before = swifter_df._scheduler
+            before = swifter_df._dask_threshold
             swifter_df.set_dask_threshold(expected)
-            actual = swifter_df._scheduler
+            actual = swifter_df._dask_threshold
             self.assertEqual(actual, expected)
             self.assertNotEqual(before, actual)
 
@@ -204,14 +206,14 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_small_dataframe(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
-        pd_val = df.apply(math_foo, compare_to=1)
-        swifter_val = df.swifter.progress_bar(desc="Vec math apply ~ DF").apply(math_foo, compare_to=1)
+        pd_val = df.apply(math_agg_foo)
+        swifter_val = df.swifter.progress_bar(desc="Vec math apply ~ DF").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)
 
     def test_nonvectorized_math_apply_on_small_dataframe_no_progress_bar(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
-        pd_val = df.apply(math_foo, compare_to=1)
-        swifter_val = df.swifter.progress_bar(enable=False).apply(math_foo, compare_to=1)
+        pd_val = df.apply(math_agg_foo)
+        swifter_val = df.swifter.progress_bar(enable=False).apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)
 
     def test_vectorized_math_apply_on_large_dataframe(self):
