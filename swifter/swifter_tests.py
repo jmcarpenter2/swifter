@@ -264,7 +264,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_foo)
+        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
