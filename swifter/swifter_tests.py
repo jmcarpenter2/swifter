@@ -219,7 +219,7 @@ class TestSwifter(unittest.TestCase):
 
     def test_vectorized_math_apply_on_large_rolling_dataframe(self):
         df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+            {"x": np.arange(0, 10_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10_000_000)
         )
 
         start_pd = time.time()
@@ -237,34 +237,16 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+            {"x": np.arange(0, 10_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10_000_000)
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("1d").apply(math_agg_foo)
+        pd_val = df.rolling("1d").apply(math_foo)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = df.swifter.rolling("1d").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo)
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
-
-        self.assertEqual(pd_val, swifter_val)
-        self.assertLess(swifter_time, pd_time)
-
-    def test_vectorized_math_apply_on_large_resampler_dataframe(self):
-        df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
-        )
-
-        start_pd = time.time()
-        pd_val = df.resample("3T").apply(sum)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
-
-        start_swifter = time.time()
-        swifter_val = df.swifter.resample("3T").progress_bar(desc="Vec math apply ~ Resample DF").apply(sum)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -282,7 +264,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
+        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_foo)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
