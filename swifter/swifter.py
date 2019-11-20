@@ -41,7 +41,7 @@ class _SwifterObject:
     ):
         self._obj = pandas_obj
         self._nrows = self._obj.shape[0]
-        self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
+        self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25.0))
 
         if npartitions is None:
             self._npartitions = cpu_count() * 2
