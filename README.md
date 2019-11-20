@@ -3,7 +3,7 @@ A package which efficiently applies any function to a pandas dataframe or series
 
 [![PyPI version](https://badge.fury.io/py/swifter.svg)](https://badge.fury.io/py/swifter)
 [![CircleCI](https://circleci.com/gh/jmcarpenter2/swifter.svg?style=shield)](https://circleci.com/gh/jmcarpenter2/swifter)
-[![codecov](https://codecov.io/gh/jmcarpenter2/swifter/branch/master/graph/badge.svg)](https://codecov.io/gh/jmcarpenter2/swifter)
+[![codecov](https://img.shields.io/codecov/c/github/jmcarpenter2/swifter?label=codecov&logo=codecov&style=flat)](https://codecov.io/gh/jmcarpenter2/swifter)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 ![GitHub stars](https://img.shields.io/github/stars/jmcarpenter2/swifter.svg?style=popout)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/swifter.svg)
