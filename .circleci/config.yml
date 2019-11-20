@@ -22,6 +22,10 @@ jobs:
           name: Unit tests
           command: |
             pip install pipenv && pipenv install --dev && pipenv run nosetests
+      - run:
+          name: Codecov report
+          command: |
+            pip install codecov && codecov
 
 workflows:
   version: 2
