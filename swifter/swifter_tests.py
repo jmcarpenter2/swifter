@@ -241,7 +241,7 @@ class TestSwifter(unittest.TestCase):
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("3T").apply(math_foo)
+        pd_val = df.rolling("3T").apply(math_agg_foo)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
