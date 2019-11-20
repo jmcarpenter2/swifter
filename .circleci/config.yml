@@ -1,4 +1,6 @@
-version: 2
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.5
 jobs:
   unittest-lint:
     parallelism: 1
@@ -19,7 +21,14 @@ jobs:
       - run:
           name: Unit tests
           command: |
-            pip install pipenv && pipenv install --dev && pipenv run nosetests
+            pip install pipenv && pipenv install --dev && pip install coverage && coverage run -m unittest swifter/swifter_tests.py
+      - run:
+          name: Codecov report
+          command: |
+            coverage report -i && coverage html -i
+            pip install codecov && codecov --required -t ${CODECOV_TOKEN} || (sleep 5 && codecov --required -t ${CODECOV_TOKEN}) || (sleep 5 && codecov --required -t ${CODECOV_TOKEN}) || (sleep 5 && codecov --required -t ${CODECOV_TOKEN}) || (sleep 5 && codecov --required -t ${CODECOV_TOKEN})
+      - store_artifacts:
+          path: htmlcov
 
 workflows:
   version: 2
