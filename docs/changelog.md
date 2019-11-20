@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.296
+Added support for resample objects in syntax that refects pandas. `df.swifter.resample(...).apply(...)`
+
 ## Version 0.295
 Context Manager to suppress print statements during the sample/test applies. Now if a print is part of the function that is applied, the only print that will occur is the final apply's print.
 

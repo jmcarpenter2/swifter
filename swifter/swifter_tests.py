@@ -65,6 +65,9 @@ class TestSwifter(unittest.TestCase):
             pd.DataFrame(
                 {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
             ).swifter.rolling("1d"),
+            pd.DataFrame(
+                {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+            ).swifter.resample("3T"),
         ]:
             before = swifter_df._npartitions
             swifter_df.set_npartitions(expected)
@@ -80,6 +83,9 @@ class TestSwifter(unittest.TestCase):
             pd.DataFrame(
                 {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
             ).swifter.rolling("1d"),
+            pd.DataFrame(
+                {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+            ).swifter.resample("3T"),
         ]:
             before = swifter_df._scheduler
             swifter_df.set_dask_scheduler(expected)
@@ -95,6 +101,9 @@ class TestSwifter(unittest.TestCase):
             pd.DataFrame(
                 {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
             ).swifter.rolling("1d"),
+            pd.DataFrame(
+                {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+            ).swifter.resample("3T"),
         ]:
             before = swifter_df._progress_bar
             swifter_df.progress_bar(expected)
@@ -134,7 +143,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = series.swifter.apply(math_vec_square)
+        swifter_val = series.swifter.progress_bar(desc="Vec math apply ~ Series").apply(math_vec_square)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -151,7 +160,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = series.swifter.apply(math_foo, compare_to=1)
+        swifter_val = series.swifter.progress_bar(desc="Nonvec math apply ~ Series").apply(math_foo, compare_to=1)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -167,7 +176,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
+        swifter_val = df.swifter.progress_bar(desc="Vec math apply ~ DF").apply(math_vec_multiply, axis=1)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -183,7 +192,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.apply(math_agg_foo, axis=1)
+        swifter_val = df.swifter.progress_bar(desc="Nonvec math apply ~ DF").apply(math_agg_foo, axis=1)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -199,7 +208,9 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.allow_dask_on_strings(True).apply(text_foo, axis=1)
+        swifter_val = (
+            df.swifter.allow_dask_on_strings(True).progress_bar(desc="Nonvec text apply ~ DF").apply(text_foo, axis=1)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -208,16 +219,16 @@ class TestSwifter(unittest.TestCase):
 
     def test_vectorized_math_apply_on_large_rolling_dataframe(self):
         df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+            {"x": np.arange(0, 1_500_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_500_000)
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("1d").apply(sum)
+        pd_val = df.rolling("3T").apply(sum)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("1d").apply(sum)
+        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Vec math apply ~ Rolling DF").apply(sum)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -226,16 +237,34 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+            {"x": np.arange(0, 1_500_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_500_000)
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("1d").apply(math_agg_foo)
+        pd_val = df.rolling("3T").apply(math_agg_foo)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("1d").apply(math_agg_foo)
+        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo)
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)
+        self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_math_apply_on_large_resampler_dataframe(self):
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+        )
+
+        start_pd = time.time()
+        pd_val = df.resample("3T").apply(math_agg_foo)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
