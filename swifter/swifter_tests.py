@@ -78,7 +78,8 @@ class TestSwifter(unittest.TestCase):
             swifter_df.set_npartitions(set_npartitions)
             actual = swifter_df._npartitions
             self.assertEqual(actual, expected)
-            self.assertNotEqual(before, actual)
+            if set_npartitions is not None:
+                self.assertNotEqual(before, actual)
 
     def test_set_dask_threshold(self):
         expected = 1000
