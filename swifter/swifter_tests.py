@@ -358,3 +358,13 @@ class TestSwifter(unittest.TestCase):
 
         self.assertEqual(pd_val, swifter_val)
         self.assertLess(swifter_time, pd_time)
+
+    def test_apply_on_empty_dataframe(self):
+        df = pd.DataFrame()
+        df.swifter.apply(lambda x : 1, axis=1)
+
+    def test_appply_on_empty_series(self):
+        series = pd.Series()
+        series.swifter.apply(math_foo, compare_to=1)
+
+
