@@ -218,7 +218,7 @@ class SeriesAccessor(_SwifterObject):
         Apply the function to the Series using swifter
         """
 
-        # Short-circuit an empty Series
+        # if the series is empty, return early using Pandas
         if not self._nrows:
             return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
@@ -330,7 +330,7 @@ class DataFrameAccessor(_SwifterObject):
         Apply the function to the DataFrame using swifter
         """
 
-        # If there are no rows
+        # If there are no rows return early using Pandas
         if not self._nrows:
             return self._obj.apply(
                     func,
