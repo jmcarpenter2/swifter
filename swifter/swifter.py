@@ -333,15 +333,8 @@ class DataFrameAccessor(_SwifterObject):
         # If there are no rows return early using Pandas
         if not self._nrows:
             return self._obj.apply(
-                    func,
-                    axis=axis,
-                    broadcast=broadcast,
-                    raw=raw,
-                    reduce=reduce,
-                    result_type=result_type,
-                    args=args,
-                    **kwds
-                )
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
 
         sample = self._obj.iloc[: self._npartitions * 2, :]
         # check if input is string or if the user is overriding the string processing default
