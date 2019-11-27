@@ -26,7 +26,7 @@ jobs:
           name: Codecov report
           command: |
             coverage report -i && coverage html -i
-            pip install codecov && codecov --required -t ${CODECOV_TOKEN} || (sleep 5 && codecov --required -t ${CODECOV_TOKEN}) || (sleep 5 && codecov --required -t ${CODECOV_TOKEN}) || (sleep 5 && codecov --required -t ${CODECOV_TOKEN}) || (sleep 5 && codecov --required -t ${CODECOV_TOKEN})
+            pip install codecov && codecov --required || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required)
       - store_artifacts:
           path: htmlcov
 
