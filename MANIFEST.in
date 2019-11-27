@@ -1,5 +1,1 @@
 include LICENSE
-
-graft assets
-graft docs
-graft examples
