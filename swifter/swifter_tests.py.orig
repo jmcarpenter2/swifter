@@ -1,4 +1,3 @@
-import sys
 import unittest
 import subprocess
 import time
@@ -11,7 +10,7 @@ import swifter
 from psutil import cpu_count
 
 logging.getLogger(__name__)
-logging.info(f"Version {swifter.__version__}")
+logging.info(f"Version 0.2656")
 
 
 def math_vec_square(x):
@@ -148,7 +147,7 @@ class TestSwifter(unittest.TestCase):
     def test_stdout_redirected(self):
         print_messages = subprocess.check_output(
             [
-                sys.executable,
+                "python",
                 "-c",
                 "import pandas as pd; import numpy as np; import swifter; "
                 + "df = pd.DataFrame({'x': np.random.normal(size=4)}); "
@@ -158,30 +157,7 @@ class TestSwifter(unittest.TestCase):
         )
         self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
-    def test_apply_on_empty_series(self):
-        series = pd.Series()
-        pd_val = series.apply(math_foo, compare_to=1)
-        swifter_val = series.swifter.apply(math_foo, compare_to=1)
-        self.assertEqual(pd_val, swifter_val)
-
-    def test_apply_on_empty_dataframe(self):
-        df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.apply(math_vec_multiply, axis=1)
-        swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
-        self.assertEqual(pd_val, swifter_val)
-
-    def test_rolling_apply_on_empty_dataframe(self):
-        df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.rolling(1).apply(math_agg_foo)
-        swifter_val = df.swifter.rolling(1).apply(math_agg_foo)
-        self.assertEqual(pd_val, swifter_val)
-
-    def test_resample_apply_on_empty_dataframe(self):
-        df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.resample("1d").apply(math_agg_foo)
-        swifter_val = df.swifter.resample("1d").apply(math_agg_foo)
-        self.assertEqual(pd_val, swifter_val)
-
+<<<<<<< Updated upstream
     def test_nonvectorized_math_apply_on_small_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000)})
         series = df["x"]
@@ -199,12 +175,11 @@ class TestSwifter(unittest.TestCase):
     def test_vectorized_math_apply_on_large_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
         series = df["x"]
+=======
+>>>>>>> Stashed changes
 
-        start_pd = time.time()
-        pd_val = series.apply(math_vec_square)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
 
+<<<<<<< Updated upstream
         start_swifter = time.time()
         swifter_val = series.swifter.progress_bar(desc="Vec math apply ~ Series").apply(math_vec_square, axis=0)
         end_swifter = time.time()
@@ -383,11 +358,131 @@ class TestSwifter(unittest.TestCase):
 
         self.assertEqual(pd_val, swifter_val)
         self.assertLess(swifter_time, pd_time)
-
+=======
     def test_apply_on_empty_dataframe(self):
         df = pd.DataFrame()
-        df.swifter.apply(lambda x: 1, axis=1)
+        swifter_val = df.swifter.apply(lambda x : 1, axis=1)
 
-    def test_appply_on_empty_series(self):
+    def test_empty_series(self):
         series = pd.Series()
-        series.swifter.apply(math_foo, compare_to=1)
+        pd_val = series.swifter.apply(math_foo, compare_to=1)
+
+
+    # def test_vectorized_math_apply_on_large_series(self):
+    #     df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
+    #     series = df["x"]
+    #
+    #     start_pd = time.time()
+    #     pd_val = series.apply(math_vec_square)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = series.swifter.apply(math_vec_square)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+    #
+    # def test_nonvectorized_math_apply_on_large_series(self):
+    #     df = pd.DataFrame({"x": np.random.normal(size=5_000_000)})
+    #     series = df["x"]
+    #
+    #     start_pd = time.time()
+    #     pd_val = series.apply(math_foo, compare_to=1)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = series.swifter.apply(math_foo, compare_to=1)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+    #
+    # def test_vectorized_math_apply_on_large_dataframe(self):
+    #     df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+    #
+    #     start_pd = time.time()
+    #     pd_val = df.apply(math_vec_multiply, axis=1)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+    #
+    # def test_nonvectorized_math_apply_on_large_dataframe(self):
+    #     df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+    #
+    #     start_pd = time.time()
+    #     pd_val = df.apply(math_agg_foo, axis=1)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = df.swifter.apply(math_agg_foo, axis=1)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+    #
+    # def test_nonvectorized_text_apply_on_large_dataframe(self):
+    #     df = pd.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
+    #
+    #     start_pd = time.time()
+    #     pd_val = df.apply(text_foo, axis=1)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = df.swifter.allow_dask_on_strings(True).apply(text_foo, axis=1)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+    #
+    # def test_vectorized_math_apply_on_large_rolling_dataframe(self):
+    #     df = pd.DataFrame(
+    #         {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+    #     )
+    #
+    #     start_pd = time.time()
+    #     pd_val = df.rolling("1d").apply(sum)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = df.swifter.rolling("1d").apply(sum)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+    #
+    # def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
+    #     df = pd.DataFrame(
+    #         {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+    #     )
+    #
+    #     start_pd = time.time()
+    #     pd_val = df.rolling("1d").apply(math_agg_foo)
+    #     end_pd = time.time()
+    #     pd_time = end_pd - start_pd
+    #
+    #     start_swifter = time.time()
+    #     swifter_val = df.swifter.rolling("1d").apply(math_agg_foo)
+    #     end_swifter = time.time()
+    #     swifter_time = end_swifter - start_swifter
+    #
+    #     self.assertEqual(pd_val, swifter_val)
+    #     self.assertLess(swifter_time, pd_time)
+>>>>>>> Stashed changes
