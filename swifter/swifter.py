@@ -217,6 +217,11 @@ class SeriesAccessor(_SwifterObject):
         """
         Apply the function to the Series using swifter
         """
+
+        # if the series is empty, return early using Pandas
+        if not self._nrows:
+            return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+
         sample = self._obj.iloc[: self._npartitions * 2]
         # check if input is string or if the user is overriding the string processing default
         allow_dask_processing = True if self._allow_dask_on_strings else (sample.dtype != "object")
@@ -324,6 +329,13 @@ class DataFrameAccessor(_SwifterObject):
         """
         Apply the function to the DataFrame using swifter
         """
+
+        # If there are no rows return early using Pandas
+        if not self._nrows:
+            return self._obj.apply(
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
+
         sample = self._obj.iloc[: self._npartitions * 2, :]
         # check if input is string or if the user is overriding the string processing default
         allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
@@ -424,6 +436,10 @@ class Transformation(_SwifterObject):
         """
         Apply the function to the transformed swifter object
         """
+        # if the transformed dataframe is empty, return early using Pandas
+        if not self._nrows:
+            return self._obj_pd.apply(func, args=args, **kwds)
+
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
         timed = timeit.timeit(wrapped, number=N_REPEATS)
@@ -545,6 +561,10 @@ class Resampler(Transformation):
         """
         Apply the function to the resampler swifter object
         """
+        # if the resampled dataframe is empty, return early using Pandas
+        if not self._nrows:
+            return self._obj_pd.apply(func, args=args, **kwds)
+
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
         timed = timeit.timeit(wrapped, number=N_REPEATS)
