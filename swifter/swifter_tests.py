@@ -177,7 +177,7 @@ class TestSwifter(unittest.TestCase):
         self.assertEqual(pd_val, swifter_val)
 
     def test_resample_apply_on_empty_dataframe(self):
-        df = pd.DataFrame(columns=["x", "y"])
+        df = pd.DataFrame(columns=["x", "y"], index=pd.DatetimeIndex(freq="3d", periods=0, start="2020/01/01"))
         pd_val = df.resample("1d").apply(math_agg_foo)
         swifter_val = df.swifter.resample("1d").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)
