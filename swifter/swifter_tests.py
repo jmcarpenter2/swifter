@@ -1,3 +1,4 @@
+import sys
 import unittest
 import subprocess
 import time
@@ -147,7 +148,7 @@ class TestSwifter(unittest.TestCase):
     def test_stdout_redirected(self):
         print_messages = subprocess.check_output(
             [
-                "python",
+                sys.executable,
                 "-c",
                 "import pandas as pd; import numpy as np; import swifter; "
                 + "df = pd.DataFrame({'x': np.random.normal(size=4)}); "
