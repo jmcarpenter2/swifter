@@ -158,6 +158,30 @@ class TestSwifter(unittest.TestCase):
         )
         self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
+    def test_apply_on_empty_series(self):
+        series = pd.Series()
+        pd_val = series.apply(math_foo, compare_to=1)
+        swifter_val = series.swifter.apply(math_foo, compare_to=1)
+        self.assertEqual(pd_val, swifter_val)
+
+    def test_apply_on_empty_dataframe(self):
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.apply(math_vec_multiply, axis=1)
+        swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
+        self.assertEqual(pd_val, swifter_val)
+
+    def test_rolling_apply_on_empty_dataframe(self):
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.rolling(1).apply(math_agg_foo)
+        swifter_val = df.swifter.rolling(1).apply(math_agg_foo)
+        self.assertEqual(pd_val, swifter_val)
+
+    def test_resample_apply_on_empty_dataframe(self):
+        df = pd.DataFrame(columns=["x", "y"], index=pd.DatetimeIndex(freq="3d", periods=0, start="2020/01/01"))
+        pd_val = df.resample("1d").apply(math_agg_foo)
+        swifter_val = df.swifter.resample("1d").apply(math_agg_foo)
+        self.assertEqual(pd_val, swifter_val)
+
     def test_nonvectorized_math_apply_on_small_series(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000)})
         series = df["x"]
@@ -359,11 +383,3 @@ class TestSwifter(unittest.TestCase):
 
         self.assertEqual(pd_val, swifter_val)
         self.assertLess(swifter_time, pd_time)
-
-    def test_apply_on_empty_dataframe(self):
-        df = pd.DataFrame()
-        df.swifter.apply(lambda x: 1, axis=1)
-
-    def test_appply_on_empty_series(self):
-        series = pd.Series()
-        series.swifter.apply(math_foo, compare_to=1)

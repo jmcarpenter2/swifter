@@ -436,6 +436,10 @@ class Transformation(_SwifterObject):
         """
         Apply the function to the transformed swifter object
         """
+        # if the transformed dataframe is empty, return early using Pandas
+        if not self._nrows:
+            return self._obj_pd.apply(func, args=args, **kwds)
+
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
         timed = timeit.timeit(wrapped, number=N_REPEATS)
@@ -520,7 +524,13 @@ class Resampler(Transformation):
         self._sample_original = self._sample_pd.copy()
         self._sample_pd = self._sample_pd.resample(**kwds)
         self._obj_pd = self._obj_pd.resample(**kwds)
-        self._obj_dd = self._obj_dd.resample(**{k: v for k, v in kwds.items() if k in ["rule", "closed", "label"]})
+        # Setting dask dataframe `self._obj_dd` to None when there are 0 `self._nrows` because
+        # swifter will immediately return the pandas form during the apply function if there are 0 `self._nrows`
+        self._obj_dd = (
+            self._obj_dd.resample(**{k: v for k, v in kwds.items() if k in ["rule", "closed", "label"]})
+            if self._nrows
+            else None
+        )
 
     def _wrapped_apply(self, func, *args, **kwds):
         def wrapped():
@@ -557,6 +567,10 @@ class Resampler(Transformation):
         """
         Apply the function to the resampler swifter object
         """
+        # if the resampled dataframe is empty, return early using Pandas
+        if not self._nrows:
+            return self._obj_pd.apply(func, args=args, **kwds)
+
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
         timed = timeit.timeit(wrapped, number=N_REPEATS)
