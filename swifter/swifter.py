@@ -524,7 +524,13 @@ class Resampler(Transformation):
         self._sample_original = self._sample_pd.copy()
         self._sample_pd = self._sample_pd.resample(**kwds)
         self._obj_pd = self._obj_pd.resample(**kwds)
-        self._obj_dd = self._obj_dd.resample(**{k: v for k, v in kwds.items() if k in ["rule", "closed", "label"]})
+        # Setting dask dataframe `self._obj_dd` to None when there are 0 `self._nrows` because
+        # swifter will immediately return the pandas form during the apply function if there are 0 `self._nrows`
+        self._obj_dd = (
+            self._obj_dd.resample(**{k: v for k, v in kwds.items() if k in ["rule", "closed", "label"]})
+            if self._nrows
+            else None
+        )
 
     def _wrapped_apply(self, func, *args, **kwds):
         def wrapped():
