@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.297
+Fixed issue causing errors when using swifter on empty dataframes. Now swifter will perform a pandas apply on empty dataframes.
+
 ## Version 0.296
 Added support for resample objects in syntax that refects pandas. `df.swifter.resample(...).apply(...)`
 
