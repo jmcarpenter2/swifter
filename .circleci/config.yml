@@ -34,4 +34,4 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - unittest-lint
+      - unittest-lint-codecov
