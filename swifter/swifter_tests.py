@@ -422,11 +422,9 @@ class TestSwifter(unittest.TestCase):
         start_pd = time.time()
         pd_val = df.applymap(math_foo)
         end_pd = time.time()
-        pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
 
         self.assertEqual(pd_val, swifter_val)
