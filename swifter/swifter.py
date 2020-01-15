@@ -398,6 +398,96 @@ class DataFrameAccessor(_SwifterObject):
                     **kwds
                 )
 
+    def _wrapped_applymap(self, func):
+        def wrapped():
+            with suppress_stdout_stderr():
+                self._obj.iloc[: self._SAMPLE_SIZE, :].applymap(func)
+
+        return wrapped
+
+    def _dask_applymap(self, func):
+        sample = self._obj.iloc[: self._npartitions * 2, :]
+        with suppress_stdout_stderr():
+            meta = sample.applymap(func)
+        try:
+            with suppress_stdout_stderr():
+                # check that the dask apply matches the pandas apply
+                tmp_df = (
+                    dd.from_pandas(sample, npartitions=self._npartitions)
+                    .applymap(func, meta=meta)
+                    .compute(scheduler=self._scheduler)
+                )
+                self._validate_apply(
+                    tmp_df.equals(meta), error_message="Dask applymap sample does not match pandas applymap sample."
+                )
+            if self._progress_bar:
+                with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Applymap"):
+                    return (
+                        dd.from_pandas(self._obj, npartitions=self._npartitions)
+                        .applymap(func, meta=meta)
+                        .compute(scheduler=self._scheduler)
+                    )
+            else:
+                return (
+                    dd.from_pandas(self._obj, npartitions=self._npartitions)
+                    .applymap(func, meta=meta)
+                    .compute(scheduler=self._scheduler)
+                )
+        except (AttributeError, ValueError, TypeError, KeyError):
+            # if dask apply doesn't match pandas apply, fallback to pandas
+            if self._progress_bar:
+                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
+                applymap_func = self._obj.progress_applymap
+            else:
+                applymap_func = self._obj.applymap
+
+            return applymap_func(func)
+
+    def applymap(self, func):
+        """
+        Applymap the function to the DataFrame using swifter
+        """
+
+        # If there are no rows return early using Pandas
+        if not self._nrows:
+            return self._obj.applymap(func)
+
+        sample = self._obj.iloc[: self._npartitions * 2, :]
+        # check if input is string or if the user is overriding the string processing default
+        allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
+
+        try:  # try to vectorize
+            with suppress_stdout_stderr():
+                tmp_df = func(sample)
+                self._validate_apply(
+                    sample.apply(func).equals(tmp_df),
+                    error_message="Vectorized function sample does not match pandas apply sample.",
+                )
+            return func(self._obj)
+        except (
+            AttributeError,
+            ValueError,
+            TypeError,
+            TypingError,
+            KeyError,
+        ):  # if can't vectorize, estimate time to pandas apply
+            wrapped = self._wrapped_applymap(func)
+            timed = timeit.timeit(wrapped, number=N_REPEATS)
+            sample_proc_est = timed / N_REPEATS
+            est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
+
+            # if pandas sample apply takes too long and not performing str processing, use dask
+            if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
+                return self._dask_applymap(func)
+            else:  # use pandas
+                if self._progress_bar:
+                    tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
+                    applymap_func = self._obj.progress_applymap
+                else:
+                    applymap_func = self._obj.applymap
+
+                return applymap_func(func)
+
 
 class Transformation(_SwifterObject):
     def __init__(

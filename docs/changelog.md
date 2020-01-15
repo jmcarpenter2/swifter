@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.300
+Added new `applymap` method for pandas dataframes. `df.swifter.applymap(...)`
+
 ## Version 0.297
 Fixed issue causing errors when using swifter on empty dataframes. Now swifter will perform a pandas apply on empty dataframes.
 
