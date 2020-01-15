@@ -418,13 +418,6 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
-
-        start_pd = time.time()
         pd_val = df.applymap(math_foo)
-        end_pd = time.time()
-
-        start_swifter = time.time()
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
-        end_swifter = time.time()
-
         self.assertEqual(pd_val, swifter_val)
