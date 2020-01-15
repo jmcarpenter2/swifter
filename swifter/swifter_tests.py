@@ -407,7 +407,7 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_nonvectorized_math_applymap_on_large_dataframe(self):
-        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=2_000_000), "y": np.random.uniform(size=2_000_000)})
 
         start_pd = time.time()
         pd_val = df.applymap(math_foo)
