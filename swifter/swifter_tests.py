@@ -170,6 +170,12 @@ class TestSwifter(unittest.TestCase):
         swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
         self.assertEqual(pd_val, swifter_val)
 
+    def test_applymap_on_empty_dataframe(self):
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.applymap(math_vec_square)
+        swifter_val = df.swifter.applymap(math_vec_square)
+        self.assertEqual(pd_val, swifter_val)
+
     def test_rolling_apply_on_empty_dataframe(self):
         df = pd.DataFrame(columns=["x", "y"])
         pd_val = df.rolling(1).apply(math_agg_foo)
@@ -415,6 +421,12 @@ class TestSwifter(unittest.TestCase):
 
         self.assertEqual(pd_val, swifter_val)
         self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_math_applymap_on_small_dataframe(self):
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
+        pd_val = df.applymap(math_foo)
+        swifter_val = df.swifter.applymap(math_foo)
+        self.assertEqual(pd_val, swifter_val)
 
     def test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar(self):
         df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
