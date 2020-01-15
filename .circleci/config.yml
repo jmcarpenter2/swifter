@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.5
 jobs:
-  unittest-lint:
+  unittest-lint-codecov:
     parallelism: 1
     working_directory: ~/repo
     docker:
