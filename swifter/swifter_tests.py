@@ -344,7 +344,7 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         df = pd.DataFrame(
-            {"x": np.arange(0, 1_500_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_500_000)
+            {"x": np.arange(0, 2_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=2_000_000)
         )
 
         start_pd = time.time()
@@ -388,12 +388,12 @@ class TestSwifter(unittest.TestCase):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
-        pd_val = df.applymap(math_vec_multiply)
+        pd_val = df.applymap(math_vec_square)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_multiply)
+        swifter_val = df.swifter.progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_square)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
