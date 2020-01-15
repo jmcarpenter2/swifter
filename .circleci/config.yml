@@ -6,18 +6,18 @@ jobs:
     parallelism: 1
     working_directory: ~/repo
     docker:
-      - image: manifoldai/orbyter-ml-dev:latest
+      - image: python:3.6
 
     steps:
       - checkout
       - run:
           name: Black lint check
           command: |
-            cd swifter && black -l 120 --check .
+            pip install black && cd swifter && black -l 120 --check .
       - run:
           name: Flake8 lint check
           command: |
-            cd swifter && flake8 --max-line-length 120 .
+            pip install flake8 && cd swifter && flake8 --max-line-length 120 .
       - run:
           name: Unit tests
           command: |
