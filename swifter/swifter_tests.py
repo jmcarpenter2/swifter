@@ -430,4 +430,3 @@ class TestSwifter(unittest.TestCase):
         swifter_time = end_swifter - start_swifter
 
         self.assertEqual(pd_val, swifter_val)
-        self.assertLess(swifter_time, pd_time)
