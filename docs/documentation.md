@@ -27,6 +27,9 @@ def pandas.Series.swifter.apply(func, convert_dtype=True, args=(), **kwds)
 
 `kwds` : Additional keyword arguments will be passed as keywords to the function
 
+NOTE: docstring taken from pandas documentation.
+
+
 ## 2. `pandas.DataFrame.swifter.apply`
 
 Efficiently apply any function to a pandas dataframe in the fastest available manner.
@@ -35,9 +38,7 @@ Efficiently apply any function to a pandas dataframe in the fastest available ma
 def pandas.DataFrame.swifter.apply(
         func, 
         axis=0, 
-        broadcast=None, 
         raw=False, 
-        reduce=None, 
         result_type=None,
         args=(), 
         **kwds
@@ -53,20 +54,9 @@ def pandas.DataFrame.swifter.apply(
 * 0 or 'index': apply function to each column.
 * 1 or 'columns': apply function to each row.
 
-`broadcast` : bool, optional. Only relevant for aggregation functions:
-
-False or None : returns a Series whose length is the length of the index or the number of columns (based on the axis parameter)
-True : results will be broadcast to the original shape of the frame, the original index and columns will be retained.
-Deprecated since version 0.23.0: This argument will be removed in a future version, replaced by result_type='broadcast'.
-
 `raw` : bool, default False
-
 False : passes each row or column as a Series to the function.
 True : the passed function will receive ndarray objects instead. If you are just applying a NumPy reduction function this will achieve much better performance.
-
-`reduce` : bool or None, default None. Try to apply reduction procedures. If the DataFrame is empty, apply will use reduce to determine whether the result should be a Series or a DataFrame. If reduce=None (the default), apply's return value will be guessed by calling func on an empty Series (note: while guessing, exceptions raised by func will be ignored). If reduce=True a Series will always be returned, and if reduce=False a DataFrame will always be returned.
-
-Deprecated since pandas version 0.23.0: This argument will be removed in a future version, replaced by result_type='reduce'.
 
 `result_type` : {'expand', 'reduce', 'broadcast', None}, default None. These only act when axis=1 (columns):
 
@@ -75,12 +65,11 @@ Deprecated since pandas version 0.23.0: This argument will be removed in a futur
 'broadcast' : results will be broadcast to the original shape of the DataFrame, the original index and columns will be retained.
 The default behaviour (None) depends on the return value of the applied function: list-like results will be returned as a Series of those. However if the apply function returns a Series these are expanded to columns.
 
-New in pandas version 0.23.0.
-
 `args` : tuple. Positional arguments to pass to func in addition to the array/series.
 
 `kwds` : Additional keyword arguments to pass as keywords arguments to func.
 
+NOTE: docstring taken from pandas documentation.
 
 **returns:**
 

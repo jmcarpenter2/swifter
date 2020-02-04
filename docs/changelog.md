@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.301
+Following pandas release v1.0.0, removing deprecated keyword args ("broadcast", "reduce")
+
 ## Version 0.300
 Added new `applymap` method for pandas dataframes. `df.swifter.applymap(...)`
 

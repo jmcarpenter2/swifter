@@ -268,13 +268,13 @@ class TestSwifter(unittest.TestCase):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
-        pd_val = df.apply(math_agg_foo, axis=1, broadcast=True)
+        pd_val = df.apply(math_agg_foo, axis=1, result_type="broadcast")
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = df.swifter.progress_bar(desc="Nonvec math apply + broadcast ~ DF").apply(
-            math_agg_foo, axis=1, broadcast=True
+            math_agg_foo, axis=1, result_type="broadcast"
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -286,13 +286,13 @@ class TestSwifter(unittest.TestCase):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
-        pd_val = df.apply(math_agg_foo, axis=1, reduce=True)
+        pd_val = df.apply(math_agg_foo, axis=1, result_type="reduce")
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = df.swifter.progress_bar(desc="Nonvec math apply + reduce ~ DF").apply(
-            math_agg_foo, axis=1, reduce=True
+            math_agg_foo, axis=1, result_type="reduce"
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
