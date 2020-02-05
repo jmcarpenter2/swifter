@@ -8,7 +8,7 @@ from dask import dataframe as dd
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
 
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 from numba.errors import TypingError
