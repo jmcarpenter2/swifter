@@ -500,7 +500,7 @@ class Transformation(_SwifterObject):
         sample_proc_est = timed / N_REPEATS
         est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._nrows
 
-        # No `allow_dask_processing` variable here, because we don't know the dtypes of the resampler object
+        # No `allow_dask_processing` variable here, because we don't know the dtypes of the transformation
         if est_apply_duration > self._dask_threshold:
             return self._dask_apply(func, *args, **kwds)
         else:  # use pandas
@@ -586,13 +586,6 @@ class Resampler(Transformation):
             else None
         )
 
-    def _wrapped_apply(self, func, *args, **kwds):
-        def wrapped():
-            with suppress_stdout_stderr():
-                self._sample_pd.apply(func, *args, **kwds)
-
-        return wrapped
-
     def _dask_apply(self, func, *args, **kwds):
         try:
             # check that the dask resampler apply matches the pandas apply
@@ -615,24 +608,4 @@ class Resampler(Transformation):
                 return self._obj_dd.agg(func, *args, **kwds).compute(scheduler=self._scheduler)
         except (AttributeError, ValueError, TypeError, KeyError):
             # use pandas -- no progress_apply available for resampler objects
-            return self._obj_pd.apply(func, *args, **kwds)
-
-    def apply(self, func, *args, **kwds):
-        """
-        Apply the function to the resampler swifter object
-        """
-        # if the resampled dataframe is empty, return early using Pandas
-        if not self._nrows:
-            return self._obj_pd.apply(func, args=args, **kwds)
-
-        # estimate time to pandas apply
-        wrapped = self._wrapped_apply(func, *args, **kwds)
-        timed = timeit.timeit(wrapped, number=N_REPEATS)
-        sample_proc_est = timed / N_REPEATS
-        est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._nrows
-
-        # No `allow_dask_processing` variable here, because we don't know the dtypes of the resampler object
-        if est_apply_duration > self._dask_threshold:
-            return self._dask_apply(func, *args, **kwds)
-        else:  # use pandas -- no progress_apply available for resampler objects
             return self._obj_pd.apply(func, *args, **kwds)
