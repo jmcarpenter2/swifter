@@ -151,7 +151,7 @@ class TestSwifter(unittest.TestCase):
                 sys.executable,
                 "-c",
                 "import pandas as pd; import numpy as np; import swifter; "
-                + "df = pd.DataFrame({'x': np.random.normal(size=4)}); "
+                + "df = pd.DataFrame({'x': np.random.normal(size=4)}, dtype='float32'); "
                 + "df.swifter.progress_bar(enable=False).apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
@@ -178,12 +178,12 @@ class TestSwifter(unittest.TestCase):
 
     def test_rolling_apply_on_empty_dataframe(self):
         df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.rolling(1).apply(math_agg_foo)
-        swifter_val = df.swifter.rolling(1).apply(math_agg_foo)
+        pd_val = df.rolling(1).apply(math_agg_foo, raw=True)
+        swifter_val = df.swifter.rolling(1).apply(math_agg_foo, raw=True)
         self.assertEqual(pd_val, swifter_val)
 
     def test_resample_apply_on_empty_dataframe(self):
-        df = pd.DataFrame(columns=["x", "y"], index=pd.DatetimeIndex(freq="3d", periods=0, start="2020/01/01"))
+        df = pd.DataFrame(columns=["x", "y"], index=pd.date_range(start="2020/01/01", periods=0))
         pd_val = df.resample("1d").apply(math_agg_foo)
         swifter_val = df.swifter.resample("1d").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)
@@ -268,13 +268,13 @@ class TestSwifter(unittest.TestCase):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
-        pd_val = df.apply(math_agg_foo, axis=1, broadcast=True)
+        pd_val = df.apply(math_agg_foo, axis=1, result_type="broadcast")
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = df.swifter.progress_bar(desc="Nonvec math apply + broadcast ~ DF").apply(
-            math_agg_foo, axis=1, broadcast=True
+            math_agg_foo, axis=1, result_type="broadcast"
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -286,13 +286,13 @@ class TestSwifter(unittest.TestCase):
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
-        pd_val = df.apply(math_agg_foo, axis=1, reduce=True)
+        pd_val = df.apply(math_agg_foo, axis=1, result_type="reduce")
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = df.swifter.progress_bar(desc="Nonvec math apply + reduce ~ DF").apply(
-            math_agg_foo, axis=1, reduce=True
+            math_agg_foo, axis=1, result_type="reduce"
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -320,14 +320,16 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_small_rolling_dataframe(self):
         df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
-        pd_val = df.rolling("3T").apply(math_agg_foo)
-        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo)
+        pd_val = df.rolling("3T").apply(math_agg_foo, raw=True)
+        swifter_val = (
+            df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo, raw=True)
+        )
         self.assertEqual(pd_val, swifter_val)
 
     def test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar(self):
         df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
-        pd_val = df.rolling("3T").apply(math_agg_foo)
-        swifter_val = df.swifter.rolling("3T").progress_bar(enable=False).apply(math_agg_foo)
+        pd_val = df.rolling("3T").apply(math_agg_foo, raw=True)
+        swifter_val = df.swifter.rolling("3T").progress_bar(enable=False).apply(math_agg_foo, raw=True)
         self.assertEqual(pd_val, swifter_val)
 
     def test_vectorized_math_apply_on_large_rolling_dataframe(self):
@@ -336,12 +338,12 @@ class TestSwifter(unittest.TestCase):
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("3T").apply(sum)
+        pd_val = df.rolling("3T").apply(max, raw=True)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Vec math apply ~ Rolling DF").apply(sum)
+        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Vec math apply ~ Rolling DF").apply(max, raw=True)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -350,16 +352,18 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         df = pd.DataFrame(
-            {"x": np.arange(0, 2_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=2_000_000)
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
         )
 
         start_pd = time.time()
-        pd_val = df.rolling("3T").apply(math_agg_foo)
+        pd_val = df.rolling("3T").apply(math_agg_foo, raw=True)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo)
+        swifter_val = (
+            df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo, raw=True)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -407,7 +411,7 @@ class TestSwifter(unittest.TestCase):
         self.assertLess(swifter_time, pd_time)
 
     def test_nonvectorized_math_applymap_on_large_dataframe(self):
-        df = pd.DataFrame({"x": np.random.normal(size=2_000_000), "y": np.random.uniform(size=2_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
 
         start_pd = time.time()
         pd_val = df.applymap(math_foo)
