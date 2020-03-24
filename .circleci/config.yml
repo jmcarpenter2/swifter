@@ -6,7 +6,7 @@ jobs:
     parallelism: 1
     working_directory: ~/repo
     docker:
-      - image: python:3.6
+      - image: python:3.7
 
     steps:
       - checkout
