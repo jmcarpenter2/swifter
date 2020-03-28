@@ -49,7 +49,7 @@ df['outCol'] = df[['inCol1', 'inCol2', 'inCol3']].swifter.apply(my_func,
 
 Further documentations on swifter is available [here](docs/documentation.md).
 
-Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along with the [speed benchmark notebook](examples/swiftapply_speedcomparison.ipynb)
+Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along with the [speed benchmark notebook](examples/swifter_speed_comparison.ipynb). The benchmarks are created using the library [perfplot](https://github.com/unutbu/perfplot).
 
 ## Vectorizes your function, when possible
 ![Alt text](/assets/vectorizes_when_possible_real.png?raw=true)

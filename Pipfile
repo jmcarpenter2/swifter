@@ -8,6 +8,8 @@ black = "==19.3b0"
 flake8 = "==3.7.7"
 nose = "*"
 numba = ">=0.30.0"
+perfplot = "==0.7.3"
+swifter = ">=0.200"
 
 [packages]
 pandas = ">=0.23.0"
