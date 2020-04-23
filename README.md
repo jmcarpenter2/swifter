@@ -24,13 +24,13 @@ conda install -c conda-forge swifter
 ```
 
 ...after installing, import `swifter` into your code along with `pandas` using:
-```
+```python
 import pandas as pd
 import swifter
 ```
 
 ## Easy to use
-```
+```python
 df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': [5, 6, 7, 8]})
 
 # runs on single core
