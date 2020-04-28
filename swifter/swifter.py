@@ -11,7 +11,7 @@ from os import devnull
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
-from numba.errors import TypingError
+from numba.core.errors import TypingError
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
