@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.303
+Swifter performance consistency improved in two ways:
+(1) The validation check of the vectorized form of swifter was always failing, because of assumption of dataframe type, when usually a vectorized function form results in array type.
+(2) When using a dataframe with duplicated indices, swifter was silently failing to leverage dask. Now swifter raises a warning when the dataframe has duplicated indices, with a recommendation to call `df.reset_index(drop=True)`.
+
 ## Version 0.301
 Following pandas release v1.0.0, removing deprecated keyword args "broadcast" and "reduce"
 
