@@ -11,7 +11,9 @@ from os import devnull
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
-from numba.errors import TypingError
+from numba.core.errors import TypingError
+
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 SAMPLE_SIZE = 1000
 N_REPEATS = 3
@@ -40,6 +42,10 @@ class _SwifterObject:
         allow_dask_on_strings=False,
     ):
         self._obj = pandas_obj
+        if self._obj.index.duplicated().any():
+            warnings.warn(
+                "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
+            )
         self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
 
