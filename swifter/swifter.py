@@ -240,8 +240,9 @@ class SeriesAccessor(_SwifterObject):
         try:  # try to vectorize
             with suppress_stdout_stderr():
                 tmp_df = func(sample, *args, **kwds)
+                sample_df = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 self._validate_apply(
-                    all(sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds) == tmp_df),
+                    all(sample_df == tmp_df) & (sample_df.shape == tmp_df.shape),
                     error_message="Vectorized function sample doesn't match pandas apply sample.",
                 )
             return func(self._obj, *args, **kwds)
@@ -331,12 +332,13 @@ class DataFrameAccessor(_SwifterObject):
         allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
 
         try:  # try to vectorize
-            with suppress_stdout_stderr():
-                tmp_df = func(sample, *args, **kwds)
-                self._validate_apply(
-                    all(sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds) == tmp_df),
-                    error_message="Vectorized function sample does not match pandas apply sample.",
-                )
+            # with suppress_stdout_stderr():
+            tmp_df = func(sample, *args, **kwds)
+            sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+            self._validate_apply(
+                all(sample_df == tmp_df) & (sample_df.shape == tmp_df.shape),
+                error_message="Vectorized function sample does not match pandas apply sample.",
+            )
             return func(self._obj, *args, **kwds)
         except (
             AttributeError,
@@ -429,8 +431,9 @@ class DataFrameAccessor(_SwifterObject):
         try:  # try to vectorize
             with suppress_stdout_stderr():
                 tmp_df = func(sample)
+                sample_df = sample.applymap(func)
                 self._validate_apply(
-                    all(sample.apply(func) == tmp_df),
+                    all(sample_df == tmp_df) & (sample_df.shape == tmp_df.shape),
                     error_message="Vectorized function sample does not match pandas apply sample.",
                 )
             return func(self._obj)
