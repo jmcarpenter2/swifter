@@ -242,7 +242,7 @@ class SeriesAccessor(_SwifterObject):
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 self._validate_apply(
-                    all(sample_df == tmp_df) & (sample_df.shape == tmp_df.shape),
+                    all(sample_df.values == tmp_df.values) & (sample_df.shape == tmp_df.shape),
                     error_message="Vectorized function sample doesn't match pandas apply sample.",
                 )
             return func(self._obj, *args, **kwds)
@@ -336,7 +336,7 @@ class DataFrameAccessor(_SwifterObject):
             tmp_df = func(sample, *args, **kwds)
             sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
             self._validate_apply(
-                all(sample_df == tmp_df) & (sample_df.shape == tmp_df.shape),
+                all(sample_df.values == tmp_df.values) & (sample_df.shape == tmp_df.shape),
                 error_message="Vectorized function sample does not match pandas apply sample.",
             )
             return func(self._obj, *args, **kwds)
@@ -433,7 +433,7 @@ class DataFrameAccessor(_SwifterObject):
                 tmp_df = func(sample)
                 sample_df = sample.applymap(func)
                 self._validate_apply(
-                    all(sample_df == tmp_df) & (sample_df.shape == tmp_df.shape),
+                    all(sample_df.values == tmp_df.values) & (sample_df.shape == tmp_df.shape),
                     error_message="Vectorized function sample does not match pandas apply sample.",
                 )
             return func(self._obj)
