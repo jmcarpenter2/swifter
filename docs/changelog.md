@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.303
+## Version 0.304
 Swifter performance consistency improved in two ways:
 
 
