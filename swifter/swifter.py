@@ -12,8 +12,13 @@ from os import devnull
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
-from numba.core.errors import TypingError
-
+ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
+try:
+    from numba.core.errors import TypingError
+    ERRORS_TO_HANDLE.append(TypingError)
+except:
+    pass
+ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 SAMPLE_SIZE = 1000
@@ -205,7 +210,7 @@ class SeriesAccessor(_SwifterObject):
                     .map_partitions(func, *args, meta=meta, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AttributeError, ValueError, TypeError, KeyError):
+        except ERRORS_TO_HANDLE:
             # if map partitions doesn't match pandas apply, we can use dask apply, but it will be a bit slower
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
@@ -247,13 +252,7 @@ class SeriesAccessor(_SwifterObject):
                     error_message="Vectorized function sample doesn't match pandas apply sample.",
                 )
             return func(self._obj, *args, **kwds)
-        except (
-            AttributeError,
-            ValueError,
-            TypeError,
-            TypingError,
-            KeyError,
-        ):  # if can't vectorize, estimate time to pandas apply
+        except ERRORS_TO_HANDLE:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
             timed = timeit.timeit(wrapped, number=N_REPEATS)
             sample_proc_est = timed / N_REPEATS
@@ -309,7 +308,7 @@ class DataFrameAccessor(_SwifterObject):
                     .apply(func, *args, axis=axis, raw=raw, result_type=result_type, meta=meta, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AttributeError, ValueError, TypeError, KeyError):
+        except ERRORS_TO_HANDLE:
             # if dask apply doesn't match pandas apply, fallback to pandas
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
@@ -341,13 +340,7 @@ class DataFrameAccessor(_SwifterObject):
                     error_message="Vectorized function sample does not match pandas apply sample.",
                 )
             return func(self._obj, *args, **kwds)
-        except (
-            AttributeError,
-            ValueError,
-            TypeError,
-            TypingError,
-            KeyError,
-        ):  # if can't vectorize, estimate time to pandas apply
+        except ERRORS_TO_HANDLE:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
             timed = timeit.timeit(wrapped, number=N_REPEATS)
             sample_proc_est = timed / N_REPEATS
@@ -406,7 +399,7 @@ class DataFrameAccessor(_SwifterObject):
                     .applymap(func, meta=meta)
                     .compute(scheduler=self._scheduler)
                 )
-        except (AttributeError, ValueError, TypeError, KeyError):
+        except ERRORS_TO_HANDLE:
             # if dask apply doesn't match pandas apply, fallback to pandas
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
@@ -438,13 +431,7 @@ class DataFrameAccessor(_SwifterObject):
                     error_message="Vectorized function sample does not match pandas apply sample.",
                 )
             return func(self._obj)
-        except (
-            AttributeError,
-            ValueError,
-            TypeError,
-            TypingError,
-            KeyError,
-        ):  # if can't vectorize, estimate time to pandas apply
+        except ERRORS_TO_HANDLE:  # if can't vectorize, estimate time to pandas apply
             wrapped = self._wrapped_applymap(func)
             timed = timeit.timeit(wrapped, number=N_REPEATS)
             sample_proc_est = timed / N_REPEATS
@@ -514,7 +501,7 @@ class Transformation(_SwifterObject):
         if est_apply_duration > self._dask_threshold:
             return self._dask_apply(func, *args, **kwds)
         else:  # use pandas
-            if self._progress_bar:
+            if self._progress_bar and hasattr(self._obj_pd, "progress_apply"):
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                 return self._obj_pd.progress_apply(func, *args, **kwds)
             else:
@@ -561,7 +548,7 @@ class Rolling(Transformation):
                     return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
             else:
                 return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
-        except (AttributeError, ValueError, TypeError, KeyError):
+        except ERRORS_TO_HANDLE:
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
                 return self._obj_pd.progress_apply(func, *args, **kwds)
@@ -616,6 +603,6 @@ class Resampler(Transformation):
                     return self._obj_dd.agg(func, *args, **kwds).compute(scheduler=self._scheduler)
             else:
                 return self._obj_dd.agg(func, *args, **kwds).compute(scheduler=self._scheduler)
-        except (AttributeError, ValueError, TypeError, KeyError):
+        except ERRORS_TO_HANDLE:
             # use pandas -- no progress_apply available for resampler objects
             return self._obj_pd.apply(func, *args, **kwds)

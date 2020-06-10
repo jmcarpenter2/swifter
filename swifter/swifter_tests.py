@@ -381,8 +381,8 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_small_resampler_dataframe(self):
         df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
-        pd_val = df.resample("3T").apply(math_agg_foo)
-        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
+        pd_val = df.resample("1M").apply(math_agg_foo)
+        swifter_val = df.swifter.resample("1M").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_large_resampler_dataframe(self):
