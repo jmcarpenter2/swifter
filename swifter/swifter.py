@@ -15,8 +15,9 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
 try:
     from numba.core.errors import TypingError
+
     ERRORS_TO_HANDLE.append(TypingError)
-except:
+except ImportError:
     pass
 ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
 warnings.filterwarnings("ignore", category=FutureWarning)
