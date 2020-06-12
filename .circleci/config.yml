@@ -4,7 +4,6 @@ orbs:
 jobs:
   unittest-lint-codecov:
     parallelism: 1
-    resource_class: medium+
     working_directory: ~/repo
     docker:
       - image: python:3.7

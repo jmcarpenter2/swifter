@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from abc import abstractmethod
 from math import ceil
 from psutil import cpu_count
 from dask import dataframe as dd
@@ -54,7 +55,7 @@ class _SwifterObject:
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
             )
         self._nrows = self._obj.shape[0]
-        self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
+        self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
 
         if npartitions is None:
             self._npartitions = cpu_count() * 2
@@ -477,12 +478,9 @@ class Transformation(_SwifterObject):
 
         return wrapped
 
+    @abstractmethod
     def _dask_apply(self, func, *args, **kwds):
-        if self._progress_bar:
-            with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
-                return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
-        else:
-            return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
+        raise NotImplementedError("Transformation class does not implement _dask_apply")
 
     def apply(self, func, *args, **kwds):
         """
@@ -525,7 +523,7 @@ class Rolling(Transformation):
             pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
         )
         self._rolling_kwds = kwds.copy()
-        self._sample_original = self._sample_pd.copy()
+        self._comparison_pd = self._obj_pd.iloc[: self._npartitions * 2]
         self._sample_pd = self._sample_pd.rolling(**kwds)
         self._obj_pd = self._obj_pd.rolling(**kwds)
         self._obj_dd = self._obj_dd.rolling(**{k: v for k, v in kwds.items() if k not in ["on", "closed"]})
@@ -535,15 +533,15 @@ class Rolling(Transformation):
             # check that the dask rolling apply matches the pandas apply
             with suppress_stdout_stderr():
                 tmp_df = (
-                    dd.from_pandas(self._sample_original, npartitions=self._npartitions)
+                    dd.from_pandas(self._comparison_pd, npartitions=self._npartitions)
                     .rolling(**{k: v for k, v in self._rolling_kwds.items() if k not in ["on", "closed"]})
                     .apply(func, *args, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-            self._validate_apply(
-                tmp_df.equals(self._sample_pd.apply(func, *args, **kwds)),
-                error_message="Dask rolling apply sample does not match pandas rolling apply sample.",
-            )
+                self._validate_apply(
+                    tmp_df.equals(self._comparison_pd.rolling(**self._rolling_kwds).apply(func, *args, **kwds)),
+                    error_message="Dask rolling apply sample does not match pandas rolling apply sample.",
+                )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
                     return self._obj_dd.apply(func, *args, **kwds).compute(scheduler=self._scheduler)
@@ -573,7 +571,7 @@ class Resampler(Transformation):
             pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
         )
         self._resampler_kwds = kwds.copy()
-        self._sample_original = self._sample_pd.copy()
+        self._comparison_pd = self._obj_pd.iloc[: self._npartitions * 2]
         self._sample_pd = self._sample_pd.resample(**kwds)
         self._obj_pd = self._obj_pd.resample(**kwds)
         # Setting dask dataframe `self._obj_dd` to None when there are 0 `self._nrows` because
@@ -589,15 +587,15 @@ class Resampler(Transformation):
             # check that the dask resampler apply matches the pandas apply
             with suppress_stdout_stderr():
                 tmp_df = (
-                    dd.from_pandas(self._sample_original, npartitions=self._npartitions)
+                    dd.from_pandas(self._comparison_pd, npartitions=self._npartitions)
                     .resample(**{k: v for k, v in self._resampler_kwds.items() if k in ["rule", "closed", "label"]})
                     .agg(func, *args, **kwds)
                     .compute(scheduler=self._scheduler)
                 )
-            self._validate_apply(
-                tmp_df.equals(self._sample_pd.apply(func, *args, **kwds)),
-                error_message="Dask resampler apply sample does not match pandas resampler apply sample.",
-            )
+                self._validate_apply(
+                    tmp_df.equals(self._comparison_pd.resample(**self._resampler_kwds).apply(func, *args, **kwds)),
+                    error_message="Dask resampler apply sample does not match pandas resampler apply sample.",
+                )
 
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
