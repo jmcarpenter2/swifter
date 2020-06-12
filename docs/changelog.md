@@ -2,7 +2,7 @@
 
 ## Version 0.305
 (1) Remove Numba hard dependency, but still handle TypingErrors when numba is installed
-(2) Only call tqdm's `progress_apply` on transformations (e.g. Resampler, Rolling) when the object has that attribute.
+(2) Only call tqdm's `progress_apply` on transformations (e.g. Resampler, Rolling) when tqdm has an implementation for that object.
 
 ## Version 0.304
 Swifter performance consistency improved in two ways:
