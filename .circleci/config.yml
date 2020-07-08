@@ -13,11 +13,12 @@ jobs:
       - run:
           name: Black lint check
           command: |
+            pip install -U pip
             pip install black && cd swifter && black -l 120 --check .
       - run:
           name: Unit tests
           command: |
-            pip install pipenv && pipenv install && pipenv install coverage && pipenv run coverage run -m unittest swifter/swifter_tests.py
+            pip install -U pipenv && pipenv install && pipenv install coverage && pipenv run coverage run -m unittest swifter/swifter_tests.py
       - run:
           name: Codecov report
           command: |

@@ -373,7 +373,7 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_text_modin_apply_on_large_dataframe(self):
         LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe")
-        df = pd.DataFrame({"letter": ["I", "You", "We"] * 333_333, "value": ["want to break free"] * 999_999})
+        df = pd.DataFrame({"letter": ["I", "You", "We"] * 100_000, "value": ["want to break free"] * 300_000})
 
         tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
         start_pd = time.time()

@@ -4,7 +4,6 @@ import timeit
 import warnings
 import numpy as np
 import pandas as pd
-import modin.pandas as md
 
 from abc import abstractmethod
 from math import ceil
@@ -17,6 +16,12 @@ from os import devnull
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
+config.dictConfig({"version": 1, "disable_existing_loggers": True})
+warnings.filterwarnings("ignore", category=FutureWarning)
+os.environ["MODIN_ENGINE"] = "ray"
+ray.init(num_cpus=cpu_count(), ignore_reinit_error=True)
+import modin.pandas as md
+
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
 try:
     from numba.core.errors import TypingError
@@ -26,8 +31,6 @@ except ImportError:
     pass
 ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
 
-config.dictConfig({"version": 1, "disable_existing_loggers": True})
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 SAMPLE_SIZE = 1000
 N_REPEATS = 3
@@ -63,10 +66,7 @@ class _SwifterObject:
         self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
 
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
+        self.set_npartitions(npartitions=npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
         self._progress_bar = progress_bar
@@ -86,6 +86,10 @@ class _SwifterObject:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
+            ray.init(
+                num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
+                ignore_reinit_error=True,
+            )
         return self
 
     def set_dask_threshold(self, dask_threshold=1):
@@ -293,11 +297,6 @@ class DataFrameAccessor(_SwifterObject):
         try:
             with suppress_stdout_stderr():
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
-                ray.init(
-                    num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
-                    ignore_reinit_error=True,
-                )
-                os.environ["MODIN_ENGINE"] = "ray"
                 # check that the modin apply matches the pandas APPLY
                 tmp_df = (
                     md.DataFrame(sample)
