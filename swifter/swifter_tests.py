@@ -50,6 +50,13 @@ def text_foo(row):
         return row["value"]
 
 
+def clean_text_foo(row):
+    text = " ".join(row)
+    text = text.strip()
+    text = text.replace(' ', '_')
+    return text
+
+
 class TestSwifter(unittest.TestCase):
     def assertSeriesEqual(self, a, b, msg):
         try:
@@ -341,8 +348,8 @@ class TestSwifter(unittest.TestCase):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
-    def test_nonvectorized_text_apply_on_large_dataframe(self):
-        LOG.info("test_nonvectorized_text_apply_on_large_dataframe")
+    def test_nonvectorized_text_dask_apply_on_large_dataframe(self):
+        LOG.info("test_nonvectorized_text_dask_apply_on_large_dataframe")
         df = pd.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
 
         tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
@@ -353,7 +360,28 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.allow_dask_on_strings(True).progress_bar(desc="Nonvec text apply ~ DF").apply(text_foo, axis=1)
+            df.swifter.allow_dask_on_strings(True).progress_bar(desc="Nonvec Dask text apply ~ DF").apply(text_foo, axis=1)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_text_modin_apply_on_large_dataframe(self):
+        LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe")
+        df = pd.DataFrame({"letter": ["I", "You", "We"] * 333_333, "value": ["want to break free"] * 999_999})
+
+        tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
+        start_pd = time.time()
+        pd_val = df.progress_apply(clean_text_foo, axis=1)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.allow_dask_on_strings(False).progress_bar(desc="Nonvec Modin text apply ~ DF").apply(clean_text_foo, axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
