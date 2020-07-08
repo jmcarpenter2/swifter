@@ -53,7 +53,7 @@ def text_foo(row):
 def clean_text_foo(row):
     text = " ".join(row)
     text = text.strip()
-    text = text.replace(' ', '_')
+    text = text.replace(" ", "_")
     return text
 
 
@@ -360,7 +360,9 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.allow_dask_on_strings(True).progress_bar(desc="Nonvec Dask text apply ~ DF").apply(text_foo, axis=1)
+            df.swifter.allow_dask_on_strings(True)
+            .progress_bar(desc="Nonvec Dask text apply ~ DF")
+            .apply(text_foo, axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -381,7 +383,9 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.allow_dask_on_strings(False).progress_bar(desc="Nonvec Modin text apply ~ DF").apply(clean_text_foo, axis=1)
+            df.swifter.allow_dask_on_strings(False)
+            .progress_bar(desc="Nonvec Modin text apply ~ DF")
+            .apply(clean_text_foo, axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
