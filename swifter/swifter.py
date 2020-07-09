@@ -19,7 +19,7 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
 os.environ["MODIN_ENGINE"] = "ray"
-ray.init(num_cpus=cpu_count(), memory=ceil(virtual_memory().available * 3 / 4), ignore_reinit_error=True)
+ray.init(num_cpus=1, memory=52428800, ignore_reinit_error=True)
 import modin.pandas as md
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
@@ -87,11 +87,6 @@ class _SwifterObject:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
-            ray.init(
-                num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
-                memory=self._ray_memory,
-                ignore_reinit_error=True,
-            )
         return self
 
     def set_ray_memory(self, memory=ceil(virtual_memory().available * 3 / 4)):
@@ -111,11 +106,6 @@ class _SwifterObject:
                 f"Cannot allocate {memory} bytes of memory to ray. "
                 f"Only {virtual_memory().available} bytes are currently available."
             )
-        ray.init(
-            num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
-            memory=self._ray_memory,
-            ignore_reinit_error=True,
-        )
         return self
 
     def set_dask_threshold(self, dask_threshold=1):
@@ -322,6 +312,11 @@ class DataFrameAccessor(_SwifterObject):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         try:
             with suppress_stdout_stderr():
+                ray.init(
+                    num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
+                    memory=self._ray_memory,
+                    ignore_reinit_error=True,
+                )
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 # check that the modin apply matches the pandas APPLY
                 tmp_df = (

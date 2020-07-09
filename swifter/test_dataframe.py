@@ -202,6 +202,7 @@ class TestDataFrame(unittest.TestCase):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.allow_dask_on_strings(False)
+            .set_ray_memory(0.5)
             .progress_bar(desc="Nonvec Modin text apply ~ DF")
             .apply(clean_text_foo, axis=1)
         )
