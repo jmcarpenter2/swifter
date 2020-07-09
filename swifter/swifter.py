@@ -19,7 +19,6 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
 os.environ["MODIN_ENGINE"] = "ray"
-ray.init(num_cpus=1, memory=52428800, ignore_reinit_error=True)
 import modin.pandas as md
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
@@ -327,11 +326,13 @@ class DataFrameAccessor(_SwifterObject):
                 self._validate_apply(
                     tmp_df.equals(sample_df), error_message="Modin apply sample does not match pandas apply sample."
                 )
-            return (
+            output_df = (
                 md.DataFrame(self._obj)
                 .apply(func, *args, axis=axis, raw=raw, result_type=result_type, **kwds)
                 ._to_pandas()
             )
+            ray.shutdown()
+            return output_df
         except ERRORS_TO_HANDLE:
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")

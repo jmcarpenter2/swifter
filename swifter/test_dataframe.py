@@ -191,7 +191,7 @@ class TestDataFrame(unittest.TestCase):
 
     def test_nonvectorized_text_modin_apply_on_large_dataframe(self):
         LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe")
-        df = pd.DataFrame({"letter": ["I", "You", "We"] * 100_000, "value": ["want to break free"] * 300_000})
+        df = pd.DataFrame({"letter": ["I", "You", "We"] * 1_000_000, "value": ["want to break free"] * 3_000_000})
 
         tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
         start_pd = time.time()
@@ -203,6 +203,7 @@ class TestDataFrame(unittest.TestCase):
         swifter_val = (
             df.swifter.allow_dask_on_strings(False)
             .set_ray_memory(0.5)
+            .set_npartitions(2)
             .progress_bar(desc="Nonvec Modin text apply ~ DF")
             .apply(clean_text_foo, axis=1)
         )
