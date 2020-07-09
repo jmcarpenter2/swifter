@@ -19,12 +19,10 @@ jobs:
       - run:
           name: Unit tests
           command: |
-            sudo pip install -U pipenv && pipenv install && pipenv install coverage && pipenv run coverage run circleci tests split swifter/swifter_tests.py --split-by=timings
-      - run:
-          name: Codecov report
-          command: |
-            coverage report -i && coverage html -i
-            sudo pip install codecov && codecov --required || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required)
+            curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | sudo bash
+            sudo pip install -U pipenv && pipenv install && /usr/local/bin/circleci tests split swifter/swifter_tests.py --split-by=timings
+      - codecov/upload:
+          file: {{ coverage_report_filepath }}
       - store_artifacts:
           path: htmlcov
 
