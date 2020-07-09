@@ -10,7 +10,7 @@ import swifter
 
 from tqdm.auto import tqdm
 
-from psutil import cpu_count
+from psutil import cpu_count, virtual_memory
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -98,6 +98,51 @@ class TestSwifter(unittest.TestCase):
             self.assertEqual(actual, expected)
             if set_npartitions is not None:
                 self.assertNotEqual(before, actual)
+
+    def test_set_ray_memory(self):
+        LOG.info("test_set_ray_memory")
+        for swifter_df, set_ray_memory, expected in zip(
+            [
+                pd.DataFrame().swifter,
+                pd.Series().swifter,
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.rolling("1d"),
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.resample("3T"),
+            ],
+            [None, 0.5, 0.99, 100000],
+            [
+                ceil(virtual_memory().available * 3 / 4),
+                ceil(virtual_memory().available * 0.5),
+                ceil(virtual_memory().available * 0.99),
+                100000,
+            ],
+        ):
+            before = swifter_df._ray_memory
+            swifter_df.set_ray_memory(set_ray_memory)
+            actual = swifter_df._ray_memory
+            self.assertEqual(actual, expected)
+            self.assertNotEqual(before, actual)
+
+    def test_cant_set_ray_memory_OOM(self):
+        LOG.info("test_cant_set_ray_memory_OOM")
+        for swifter_df, set_ray_memory in zip(
+            [
+                pd.DataFrame().swifter,
+                pd.Series().swifter,
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.rolling("1d"),
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.resample("3T"),
+            ],
+            [1e100, 1e100, 1e100, 1e100],
+        ):
+            with self.assertRaises(MemoryError):
+                swifter_df.set_ray_memory(set_ray_memory)
 
     def test_set_dask_threshold(self):
         LOG.info("test_set_dask_threshold")

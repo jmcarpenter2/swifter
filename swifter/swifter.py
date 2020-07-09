@@ -8,7 +8,7 @@ import pandas as pd
 from abc import abstractmethod
 from math import ceil
 from logging import config
-from psutil import cpu_count
+from psutil import cpu_count, virtual_memory
 from dask import dataframe as dd
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
@@ -19,7 +19,7 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
 os.environ["MODIN_ENGINE"] = "ray"
-ray.init(num_cpus=cpu_count(), ignore_reinit_error=True)
+ray.init(num_cpus=cpu_count(), memory=ceil(virtual_memory().available * 3 / 4), ignore_reinit_error=True)
 import modin.pandas as md
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
@@ -66,6 +66,7 @@ class _SwifterObject:
         self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
 
+        self._ray_memory = ceil(virtual_memory().available * 3 / 4)
         self.set_npartitions(npartitions=npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
@@ -88,8 +89,33 @@ class _SwifterObject:
             self._npartitions = npartitions
             ray.init(
                 num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
+                memory=self._ray_memory,
                 ignore_reinit_error=True,
             )
+        return self
+
+    def set_ray_memory(self, memory=ceil(virtual_memory().available * 3 / 4)):
+        """
+        Set the amount of memory used by ray for modin dataframes.
+        If a proportion of 1 is provided (0 < memory <= 1],
+            then that proportion of available memory is used
+        If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
+            then that many bytes of memory are used
+        """
+        if 0 < memory <= 1:
+            self._ray_memory = ceil(virtual_memory().available * memory)
+        elif 1 < memory <= virtual_memory().available:
+            self._ray_memory = ceil(memory)
+        else:
+            raise MemoryError(
+                f"Cannot allocate {memory} bytes of memory to ray. "
+                f"Only {virtual_memory().available} bytes are currently available."
+            )
+        ray.init(
+            num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
+            memory=self._ray_memory,
+            ignore_reinit_error=True,
+        )
         return self
 
     def set_dask_threshold(self, dask_threshold=1):
@@ -143,7 +169,7 @@ class _SwifterObject:
             self._progress_bar,
             self._progress_bar_desc,
             self._allow_dask_on_strings,
-            **kwds
+            **kwds,
         )
 
     def resample(
@@ -181,7 +207,7 @@ class _SwifterObject:
             self._scheduler,
             self._progress_bar,
             self._progress_bar_desc,
-            **kwds
+            **kwds,
         )
 
 
@@ -551,7 +577,7 @@ class Rolling(Transformation):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
-        **kwds
+        **kwds,
     ):
         super(Rolling, self).__init__(
             pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
@@ -599,7 +625,7 @@ class Resampler(Transformation):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
-        **kwds
+        **kwds,
     ):
         super(Resampler, self).__init__(
             pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
