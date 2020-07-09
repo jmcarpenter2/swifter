@@ -3,27 +3,28 @@ orbs:
   codecov: codecov/codecov@1.0.5
 jobs:
   unittest-lint-codecov:
-    parallelism: 1
+    parallelism: 4
+    resource_class: large
     working_directory: ~/repo
     docker:
-      - image: python:3.7
+      - image: circleci/python:3.7.0
+    
 
     steps:
       - checkout
       - run:
           name: Black lint check
           command: |
-            pip install -U pip
-            pip install black && cd swifter && black -l 120 --check .
+            sudo pip install black && cd swifter && black -l 120 --check .
       - run:
           name: Unit tests
           command: |
-            pip install -U pipenv && pipenv install && pipenv install coverage && pipenv run coverage run -m unittest swifter/swifter_tests.py
+            sudo pip install -U pipenv && pipenv install && pipenv install coverage && pipenv run coverage run circleci tests split swifter/swifter_tests.py --split-by=timings
       - run:
           name: Codecov report
           command: |
             coverage report -i && coverage html -i
-            pip install codecov && codecov --required || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required)
+            sudo pip install codecov && codecov --required || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required)
       - store_artifacts:
           path: htmlcov
 
