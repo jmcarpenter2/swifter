@@ -1,4 +1,3 @@
-import os
 import ray
 import timeit
 import warnings
@@ -18,7 +17,6 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
-os.environ["MODIN_ENGINE"] = "ray"
 import modin.pandas as md
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
@@ -65,7 +63,7 @@ class _SwifterObject:
         self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
 
-        self._ray_memory = ceil(virtual_memory().available * 3 / 4)
+        self._ray_memory = None
         self.set_npartitions(npartitions=npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
@@ -86,17 +84,25 @@ class _SwifterObject:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
+        md.DEFAULT_NPARTITIONS = self._npartitions
         return self
 
-    def set_ray_memory(self, memory=ceil(virtual_memory().available * 3 / 4)):
+    def set_ray_compute(self, num_cpus=None, memory=None, **kwds):
         """
-        Set the amount of memory used by ray for modin dataframes.
-        If a proportion of 1 is provided (0 < memory <= 1],
-            then that proportion of available memory is used
-        If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
-            then that many bytes of memory are used
+        Set the amount of compute used by ray for modin dataframes.
+
+        Args:
+            n_cpus: the number of cpus used by ray multiprocessing
+            memory: the amount of memory allocated to ray workers
+                If a proportion of 1 is provided (0 < memory <= 1],
+                    then that proportion of available memory is used
+                If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
+                    then that many bytes of memory are used
+            kwds: key-word arguments to pass to `ray.init()`
         """
-        if 0 < memory <= 1:
+        if memory is None:
+            self._ray_memory = memory
+        elif 0 < memory <= 1:
             self._ray_memory = ceil(virtual_memory().available * memory)
         elif 1 < memory <= virtual_memory().available:
             self._ray_memory = ceil(memory)
@@ -105,6 +111,8 @@ class _SwifterObject:
                 f"Cannot allocate {memory} bytes of memory to ray. "
                 f"Only {virtual_memory().available} bytes are currently available."
             )
+        ray.shutdown()
+        ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
         return self
 
     def set_dask_threshold(self, dask_threshold=1):
@@ -311,11 +319,6 @@ class DataFrameAccessor(_SwifterObject):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         try:
             with suppress_stdout_stderr():
-                ray.init(
-                    num_cpus=cpu_count() if self._npartitions == cpu_count() * 2 else self._npartitions,
-                    memory=self._ray_memory,
-                    ignore_reinit_error=True,
-                )
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 # check that the modin apply matches the pandas APPLY
                 tmp_df = (
@@ -331,7 +334,6 @@ class DataFrameAccessor(_SwifterObject):
                 .apply(func, *args, axis=axis, raw=raw, result_type=result_type, **kwds)
                 ._to_pandas()
             )
-            ray.shutdown()
             return output_df
         except ERRORS_TO_HANDLE:
             if self._progress_bar:
