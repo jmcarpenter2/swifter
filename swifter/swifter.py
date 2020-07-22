@@ -1,5 +1,4 @@
 import os
-import ray
 import timeit
 import warnings
 import numpy as np
@@ -12,6 +11,8 @@ from psutil import cpu_count
 from dask import dataframe as dd
 
 from tqdm.auto import tqdm
+from .tqdm_dask_progressbar import TQDMDaskProgressBar
+
 from .base import (
     _SwifterBaseObject,
     suppress_stdout_stderr,
@@ -22,14 +23,11 @@ from .base import (
 from .parallel_accessor import (
     register_parallel_series_accessor, register_parallel_dataframe_accessor
 )
-from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
 os.environ["MODIN_ENGINE"] = "ray"
 import modin.pandas as md
-md.DEFAULT_NPARTITIONS = 4
-
 register_parallel_series_accessor(md.Series)
 register_parallel_dataframe_accessor(md.DataFrame)
 
