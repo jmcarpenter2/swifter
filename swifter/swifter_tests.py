@@ -3,14 +3,16 @@ import unittest
 import subprocess
 import time
 import logging
+from math import ceil
+from psutil import cpu_count, virtual_memory
 
 import numpy as np
 import pandas as pd
+import modin.pandas as md
 import swifter
 
 from tqdm.auto import tqdm
 
-from psutil import cpu_count
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -63,10 +65,24 @@ class TestSwifter(unittest.TestCase):
         except AssertionError as e:
             raise self.failureException(msg) from e
 
+    def assertModinSeriesEqual(self, a, b, msg):
+        try:
+            assert a.equals(b)
+        except AssertionError as e:
+            raise self.failureException(msg) from e
+
+    def assertModinDataFrameEqual(self, a, b, msg):
+        try:
+            assert a.equals(b)
+        except AssertionError as e:
+            raise self.failureException(msg) from e
+
     def setUp(self):
         LOG.info(f"Version {swifter.__version__}")
         self.addTypeEqualityFunc(pd.Series, self.assertSeriesEqual)
         self.addTypeEqualityFunc(pd.DataFrame, self.assertDataFrameEqual)
+        self.addTypeEqualityFunc(md.Series, self.assertModinSeriesEqual)
+        self.addTypeEqualityFunc(md.DataFrame, self.assertModinDataFrameEqual)
         self.ncores = cpu_count()
 
     def test_set_npartitions(self):
@@ -257,7 +273,11 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = series.swifter.progress_bar(desc="Nonvec math apply ~ Series").apply(math_foo, compare_to=1)
+        swifter_val = (
+            series.swifter.set_npartitions(4)
+            .progress_bar(desc="Nonvec math apply ~ Series")
+            .apply(math_foo, compare_to=1)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -291,7 +311,9 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.progress_bar(desc="Vec math apply ~ DF").apply(math_vec_multiply, axis=1)
+        swifter_val = (
+            df.swifter.set_npartitions(4).progress_bar(desc="Vec math apply ~ DF").apply(math_vec_multiply, axis=1)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -310,8 +332,10 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.progress_bar(desc="Nonvec math apply + broadcast ~ DF").apply(
-            math_agg_foo, axis=1, result_type="broadcast"
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .progress_bar(desc="Nonvec math apply + broadcast ~ DF")
+            .apply(math_agg_foo, axis=1, result_type="broadcast")
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -331,8 +355,10 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.progress_bar(desc="Nonvec math apply + reduce ~ DF").apply(
-            math_agg_foo, axis=1, result_type="reduce"
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .progress_bar(desc="Nonvec math apply + reduce ~ DF")
+            .apply(math_agg_foo, axis=1, result_type="reduce")
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -353,7 +379,10 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.allow_dask_on_strings(True).progress_bar(desc="Nonvec text apply ~ DF").apply(text_foo, axis=1)
+            df.swifter.set_npartitions(4)
+            .allow_dask_on_strings(True)
+            .progress_bar(desc="Nonvec text apply ~ DF")
+            .apply(text_foo, axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -390,7 +419,12 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.rolling("1d").progress_bar(desc="Vec math apply ~ Rolling DF").apply(max, raw=True)
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .rolling("1d")
+            .progress_bar(desc="Vec math apply ~ Rolling DF")
+            .apply(max, raw=True)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -411,7 +445,10 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.rolling("3T").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo, raw=True)
+            df.swifter.set_npartitions(4)
+            .rolling("3T")
+            .progress_bar(desc="Nonvec math apply ~ Rolling DF")
+            .apply(math_agg_foo, raw=True)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -439,7 +476,12 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.resample("3T").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .resample("3T")
+            .progress_bar(desc="Nonvec math apply ~ Resample DF")
+            .apply(math_agg_foo)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -458,7 +500,9 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_square)
+        swifter_val = (
+            df.swifter.set_npartitions(4).progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_square)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -477,7 +521,7 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = df.swifter.progress_bar(desc="Nonvec math applymap ~ DF").applymap(math_foo)
+        swifter_val = df.swifter.set_npartitions(4).progress_bar(desc="Nonvec math applymap ~ DF").applymap(math_foo)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -498,3 +542,31 @@ class TestSwifter(unittest.TestCase):
         pd_val = df.applymap(math_foo)
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_vectorized_modin_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_modin_apply_on_large_dataframe")
+        df = md.DataFrame({"x": np.random.normal(size=20_000_000)})
+        start_md = time.time()
+        md_val = df.x.apply(math_vec_square)
+        md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        end_md = time.time()
+        md_time = end_md - start_md
+
+        start_swifter = time.time()
+        swifter_val = df.x.swifter.set_npartitions(4).apply(math_vec_square)
+        swifter_pd_val = (
+            swifter_val._to_pandas()
+        )  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(md_val, swifter_val)  # equality test
+        self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
+        self.assertLess(swifter_time, md_time)  # speed test
+
+    def test_nonvectorized_modin_apply_on_small_dataframe(self):
+        LOG.info("test_nonvectorized_modin_apply_on_small_dataframe")
+        df = md.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
+        md_val = df.apply(text_foo, axis=1)
+        swifter_val = df.swifter.set_npartitions(4).apply(text_foo, axis=1)
+        self.assertEqual(md_val, swifter_val)  # equality test

@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 0.310
+Enable compatibility with modin dataframes. Compatibility not only allows modin dataframes to work with `df.swifter.apply(...)`, but still attempts to vectorize the operation which can lead to a performance boost.
+
+Example:
+```python
+
+import modin.pandas as pd
+df = pd.DataFrame(...)
+df.swifter.apply(...)
+```
+
 ## Version 0.305
 (1) Remove Numba hard dependency, but still handle TypingErrors when numba is installed
 (2) Only call tqdm's `progress_apply` on transformations (e.g. Resampler, Rolling) when tqdm has an implementation for that object.

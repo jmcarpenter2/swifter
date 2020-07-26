@@ -1,5 +1,7 @@
 from os import devnull
+from psutil import cpu_count
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
+import modin.pandas as md
 
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
@@ -14,6 +16,7 @@ ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
 SAMPLE_SIZE = 1000
 N_REPEATS = 3
 
+
 @contextmanager
 def suppress_stdout_stderr():
     """
@@ -24,6 +27,7 @@ def suppress_stdout_stderr():
         with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
             yield (err, out)
 
+
 class _SwifterBaseObject:
     def __init__(self, base_obj):
         self._obj = base_obj
@@ -33,3 +37,14 @@ class _SwifterBaseObject:
     def _validate_apply(expr, error_message):
         if not expr:
             raise ValueError(error_message)
+
+    def set_npartitions(self, npartitions=None):
+        """
+        Set the number of partitions to use for dask/modin
+        """
+        if npartitions is None:
+            self._npartitions = cpu_count() * 2
+        else:
+            self._npartitions = npartitions
+        md.DEFAULT_NPARTITIONS = self._npartitions
+        return self

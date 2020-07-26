@@ -1,4 +1,3 @@
-import os
 import timeit
 import warnings
 import numpy as np
@@ -7,7 +6,6 @@ import pandas as pd
 from abc import abstractmethod
 from math import ceil
 from logging import config
-from psutil import cpu_count
 from dask import dataframe as dd
 
 from tqdm.auto import tqdm
@@ -20,14 +18,12 @@ from .base import (
     SAMPLE_SIZE,
     N_REPEATS,
 )
-from .parallel_accessor import (
-    register_parallel_series_accessor, register_parallel_dataframe_accessor
-)
+from .parallel_accessor import register_parallel_series_accessor, register_parallel_dataframe_accessor
 
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
-os.environ["MODIN_ENGINE"] = "ray"
 import modin.pandas as md
+
 register_parallel_series_accessor(md.Series)
 register_parallel_dataframe_accessor(md.DataFrame)
 
@@ -49,25 +45,12 @@ class _SwifterObject(_SwifterBaseObject):
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
             )
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
+        self.set_npartitions(npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
         self._progress_bar = progress_bar
         self._progress_bar_desc = progress_bar_desc
         self._allow_dask_on_strings = allow_dask_on_strings
-
-    def set_npartitions(self, npartitions=None):
-        """
-        Set the number of partitions to use for dask
-        """
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
-        return self
 
     def set_dask_threshold(self, dask_threshold=1):
         """
