@@ -96,12 +96,12 @@ class _SwifterObject(_SwifterBaseObject):
         }
         return Rolling(
             self._obj,
-            self._npartitions,
-            self._dask_threshold,
-            self._scheduler,
-            self._progress_bar,
-            self._progress_bar_desc,
-            self._allow_dask_on_strings,
+            npartitions=self._npartitions,
+            dask_threshold=self._dask_threshold,
+            scheduler=self._scheduler,
+            progress_bar=self._progress_bar,
+            progress_bar_desc=self._progress_bar_desc,
+            allow_dask_on_strings=self._allow_dask_on_strings,
             **kwds,
         )
 
@@ -135,11 +135,12 @@ class _SwifterObject(_SwifterBaseObject):
         }
         return Resampler(
             self._obj,
-            self._npartitions,
-            self._dask_threshold,
-            self._scheduler,
-            self._progress_bar,
-            self._progress_bar_desc,
+            npartitions=self._npartitions,
+            dask_threhsold=self._dask_threshold,
+            scheduler=self._scheduler,
+            progress_bar=self._progress_bar,
+            progress_bar_desc=self._progress_bar_desc,
+            allow_dask_on_strings=self._allow_dask_on_strings,
             **kwds,
         )
 
@@ -513,7 +514,13 @@ class Rolling(Transformation):
         **kwds,
     ):
         super(Rolling, self).__init__(
-            pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
+            pandas_obj,
+            npartitions=npartitions,
+            dask_threshold=dask_threshold,
+            scheduler=scheduler,
+            progress_bar=progress_bar,
+            progress_bar_desc=progress_bar_desc,
+            allow_dask_on_strings=allow_dask_on_strings,
         )
         self._rolling_kwds = kwds.copy()
         self._comparison_pd = self._obj_pd.iloc[: self._npartitions * 2]
@@ -561,7 +568,13 @@ class Resampler(Transformation):
         **kwds,
     ):
         super(Resampler, self).__init__(
-            pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
+            pandas_obj,
+            npartitions=npartitions,
+            dask_threshold=dask_threshold,
+            scheduler=scheduler,
+            progress_bar=progress_bar,
+            progress_bar_desc=progress_bar_desc,
+            allow_dask_on_strings=allow_dask_on_strings,
         )
         self._resampler_kwds = kwds.copy()
         self._comparison_pd = self._obj_pd.iloc[: self._npartitions * 2]

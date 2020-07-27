@@ -581,7 +581,7 @@ class TestPandasTransformation(TestSwifter):
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_large_rolling_dataframe")
         df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+            {"x": np.arange(0, 1_500_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_500_000)
         )
 
         start_pd = time.time()
