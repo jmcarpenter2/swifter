@@ -565,6 +565,7 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
+            .set_ray_compute(num_cpus=1, memory=0.05)
             .rolling("1d")
             .progress_bar(desc="Vec math apply ~ Rolling DF")
             .apply(max, raw=True)
