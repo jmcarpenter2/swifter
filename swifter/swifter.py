@@ -136,7 +136,7 @@ class _SwifterObject(_SwifterBaseObject):
         return Resampler(
             self._obj,
             npartitions=self._npartitions,
-            dask_threhsold=self._dask_threshold,
+            dask_threshold=self._dask_threshold,
             scheduler=self._scheduler,
             progress_bar=self._progress_bar,
             progress_bar_desc=self._progress_bar_desc,
