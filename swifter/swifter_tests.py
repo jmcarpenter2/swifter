@@ -565,7 +565,7 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
-            .set_ray_compute(num_cpus=1, memory=0.05)
+            .set_ray_compute(num_cpus=1, memory=0.01)
             .rolling("1d")
             .progress_bar(desc="Vec math apply ~ Rolling DF")
             .apply(max, raw=True)
@@ -591,7 +591,7 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
-            .set_ray_compute(num_cpus=1, memory=0.05)
+            .set_ray_compute(num_cpus=1, memory=0.01)
             .rolling("3T")
             .progress_bar(desc="Nonvec math apply ~ Rolling DF")
             .apply(math_agg_foo, raw=True)
@@ -629,7 +629,7 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
-            .set_ray_memory(num_cpus=1, memory=0.05)
+            .set_ray_memory(num_cpus=1, memory=0.01)
             .resample("3T")
             .progress_bar(desc="Nonvec math apply ~ Resample DF")
             .apply(math_agg_foo)
