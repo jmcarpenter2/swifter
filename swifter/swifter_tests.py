@@ -687,6 +687,7 @@ class TestPandasTransformation(TestSwifter):
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
+
 class TestModinSeries(TestSwifter):
     def test_apply_on_empty_modin_series(self):
         LOG.info("test_apply_on_empty_series")
@@ -701,7 +702,7 @@ class TestModinSeries(TestSwifter):
         md_val = df.apply(math_foo)
         swifter_val = df.swifter.set_npartitions(4).apply(math_foo)
         self.assertEqual(md_val, swifter_val)  # equality test
-    
+
     def test_vectorized_modin_apply_on_large_series(self):
         LOG.info("test_vectorized_modin_apply_on_large_series")
         df = md.Series(np.random.normal(size=20_000_000), name="x")
@@ -723,6 +724,7 @@ class TestModinSeries(TestSwifter):
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
 
+
 class TestModinDataFrame(TestSwifter):
     def test_apply_on_empty_modin_dataframe(self):
         LOG.info("test_apply_on_empty_series")
@@ -737,7 +739,6 @@ class TestModinDataFrame(TestSwifter):
         md_val = df.apply(text_foo, axis=1)
         swifter_val = df.swifter.set_npartitions(4).apply(text_foo, axis=1)
         self.assertEqual(md_val, swifter_val)  # equality test
-
 
     def test_vectorized_modin_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_modin_apply_on_large_dataframe")
@@ -759,4 +760,3 @@ class TestModinDataFrame(TestSwifter):
         self.assertEqual(md_val, swifter_val)  # equality test
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
-
