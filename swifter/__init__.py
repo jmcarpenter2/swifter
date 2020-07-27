@@ -9,4 +9,4 @@ __all__ = [
     "register_parallel_dataframe_accessor",
     "register_parallel_series_accessor",
 ]
-__version__ = "0.400"
+__version__ = "1.0.0"

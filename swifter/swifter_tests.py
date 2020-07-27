@@ -520,14 +520,14 @@ class TestPandasTransformation(TestSwifter):
         LOG.info("test_rolling_apply_on_empty_dataframe")
         df = pd.DataFrame(columns=["x", "y"])
         pd_val = df.rolling(1).apply(math_agg_foo, raw=True)
-        swifter_val = df.swifter.rolling(1).apply(math_agg_foo, raw=True)
+        swifter_val = df.swifter.set_npartitions(4).rolling(1).apply(math_agg_foo, raw=True)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_resample_apply_on_empty_dataframe(self):
         LOG.info("test_resample_apply_on_empty_dataframe")
         df = pd.DataFrame(columns=["x", "y"], index=pd.date_range(start="2020/01/01", periods=0))
         pd_val = df.resample("1d").apply(math_agg_foo)
-        swifter_val = df.swifter.resample("1d").apply(math_agg_foo)
+        swifter_val = df.swifter.set_npartitions(4).resample("1d").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_small_rolling_dataframe(self):
@@ -535,7 +535,10 @@ class TestPandasTransformation(TestSwifter):
         df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
         pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
         swifter_val = (
-            df.swifter.rolling("1d").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo, raw=True)
+            df.swifter.set_npartitions(4)
+            .rolling("1d")
+            .progress_bar(desc="Nonvec math apply ~ Rolling DF")
+            .apply(math_agg_foo, raw=True)
         )
         self.assertEqual(pd_val, swifter_val)  # equality test
 
@@ -543,7 +546,9 @@ class TestPandasTransformation(TestSwifter):
         LOG.info("test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar")
         df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
         pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
-        swifter_val = df.swifter.rolling("1d").progress_bar(enable=False).apply(math_agg_foo, raw=True)
+        swifter_val = (
+            df.swifter.set_npartitions(4).rolling("1d").progress_bar(enable=False).apply(math_agg_foo, raw=True)
+        )
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_vectorized_math_apply_on_large_rolling_dataframe(self):
@@ -610,7 +615,9 @@ class TestPandasTransformation(TestSwifter):
 
     def test_nonvectorized_math_apply_on_large_resampler_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_large_resampler_dataframe")
-        df = pd.DataFrame({"x": np.arange(0, 500_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=500_000))
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+        )
 
         start_pd = time.time()
         pd_val = df.resample("3T").apply(math_agg_foo)

@@ -2,9 +2,8 @@ from os import devnull
 from math import ceil
 from psutil import cpu_count, virtual_memory
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
-
-import ray
 import modin.pandas as md
+import ray
 
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
