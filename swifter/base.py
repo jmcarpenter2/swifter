@@ -1,7 +1,9 @@
 from os import devnull
-from psutil import cpu_count
+from math import ceil
+from psutil import cpu_count, virtual_memory
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 import modin.pandas as md
+import ray
 
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
@@ -29,9 +31,11 @@ def suppress_stdout_stderr():
 
 
 class _SwifterBaseObject:
-    def __init__(self, base_obj):
+    def __init__(self, base_obj, npartitions=None):
         self._obj = base_obj
         self._nrows = self._obj.shape[0]
+        self._ray_memory = None
+        self.set_npartitions(npartitions=npartitions)
 
     @staticmethod
     def _validate_apply(expr, error_message):
@@ -47,4 +51,32 @@ class _SwifterBaseObject:
         else:
             self._npartitions = npartitions
         md.DEFAULT_NPARTITIONS = self._npartitions
+        return self
+
+    def set_ray_compute(self, num_cpus=None, memory=None, **kwds):
+        """
+        Set the amount of compute used by ray for modin dataframes.
+
+        Args:
+            num_cpus: the number of cpus used by ray multiprocessing
+            memory: the amount of memory allocated to ray workers
+                If a proportion of 1 is provided (0 < memory <= 1],
+                    then that proportion of available memory is used
+                If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
+                    then that many bytes of memory are used
+            kwds: key-word arguments to pass to `ray.init()`
+        """
+        if memory is None:
+            self._ray_memory = memory
+        elif 0 < memory <= 1:
+            self._ray_memory = ceil(virtual_memory().available * memory)
+        elif 1 < memory <= virtual_memory().available:
+            self._ray_memory = ceil(memory)
+        else:
+            raise MemoryError(
+                f"Cannot allocate {memory} bytes of memory to ray. "
+                f"Only {virtual_memory().available} bytes are currently available."
+            )
+        ray.shutdown()
+        ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
         return self

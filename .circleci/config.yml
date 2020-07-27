@@ -4,10 +4,10 @@ orbs:
 jobs:
   unittest-lint-codecov:
     parallelism: 1
+    resource_class: xlarge
     working_directory: ~/repo
     docker:
       - image: python:3.7
-    resource_class: xlarge
 
     steps:
       - checkout

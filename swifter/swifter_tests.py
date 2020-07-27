@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 import modin.pandas as md
 import swifter
+import ray
 
+from math import ceil, isclose
 from tqdm.auto import tqdm
 
 
@@ -52,6 +54,13 @@ def text_foo(row):
         return row["value"]
 
 
+def clean_text_foo(row):
+    text = " ".join(row)
+    text = text.strip()
+    text = text.replace(" ", "_")
+    return text
+
+
 class TestSwifter(unittest.TestCase):
     def assertSeriesEqual(self, a, b, msg):
         try:
@@ -84,7 +93,10 @@ class TestSwifter(unittest.TestCase):
         self.addTypeEqualityFunc(md.Series, self.assertModinSeriesEqual)
         self.addTypeEqualityFunc(md.DataFrame, self.assertModinDataFrameEqual)
         self.ncores = cpu_count()
+        ray.shutdown()
 
+
+class TestSetup(TestSwifter):
     def test_set_npartitions(self):
         LOG.info("test_set_npartitions")
         for swifter_df, set_npartitions, expected in zip(
@@ -107,6 +119,46 @@ class TestSwifter(unittest.TestCase):
             self.assertEqual(actual, expected)
             if set_npartitions is not None:
                 self.assertNotEqual(before, actual)
+
+    def test_set_ray_compute(self):
+        LOG.info("test_set_ray_compute")
+        for swifter_df, set_ray_memory, expected in zip(
+            [
+                pd.DataFrame().swifter,
+                pd.Series().swifter,
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.rolling("1d"),
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.resample("3T"),
+            ],
+            [0.5, 0.99, 52428800],
+            [ceil(virtual_memory().available * 0.5), ceil(virtual_memory().available * 0.99), 52428800,],
+        ):
+            before = swifter_df._ray_memory
+            swifter_df.set_ray_compute(num_cpus=1, memory=set_ray_memory)
+            actual = swifter_df._ray_memory
+            self.assertTrue(isclose(actual, expected, rel_tol=0.1))
+            self.assertNotEqual(before, actual)
+
+    def test_cant_set_ray_memory_OOM(self):
+        LOG.info("test_cant_set_ray_memory_OOM")
+        for swifter_df, set_ray_memory in zip(
+            [
+                pd.DataFrame().swifter,
+                pd.Series().swifter,
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.rolling("1d"),
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
+                ).swifter.resample("3T"),
+            ],
+            [1e100, 1e100, 1e100, 1e100],
+        ):
+            with self.assertRaises(MemoryError):
+                swifter_df.set_ray_compute(memory=set_ray_memory)
 
     def test_set_dask_threshold(self):
         LOG.info("test_set_dask_threshold")
@@ -189,39 +241,13 @@ class TestSwifter(unittest.TestCase):
         )
         self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
+
+class TestPandasSeries(TestSwifter):
     def test_apply_on_empty_series(self):
         LOG.info("test_apply_on_empty_series")
         series = pd.Series()
         pd_val = series.apply(math_foo, compare_to=1)
         swifter_val = series.swifter.apply(math_foo, compare_to=1)
-        self.assertEqual(pd_val, swifter_val)  # equality test
-
-    def test_apply_on_empty_dataframe(self):
-        LOG.info("test_apply_on_empty_dataframe")
-        df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.apply(math_vec_multiply, axis=1)
-        swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
-        self.assertEqual(pd_val, swifter_val)  # equality test
-
-    def test_applymap_on_empty_dataframe(self):
-        LOG.info("test_applymap_on_empty_dataframe")
-        df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.applymap(math_vec_square)
-        swifter_val = df.swifter.applymap(math_vec_square)
-        self.assertEqual(pd_val, swifter_val)  # equality test
-
-    def test_rolling_apply_on_empty_dataframe(self):
-        LOG.info("test_rolling_apply_on_empty_dataframe")
-        df = pd.DataFrame(columns=["x", "y"])
-        pd_val = df.rolling(1).apply(math_agg_foo, raw=True)
-        swifter_val = df.swifter.rolling(1).apply(math_agg_foo, raw=True)
-        self.assertEqual(pd_val, swifter_val)  # equality test
-
-    def test_resample_apply_on_empty_dataframe(self):
-        LOG.info("test_resample_apply_on_empty_dataframe")
-        df = pd.DataFrame(columns=["x", "y"], index=pd.date_range(start="2020/01/01", periods=0))
-        pd_val = df.resample("1d").apply(math_agg_foo)
-        swifter_val = df.swifter.resample("1d").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_small_series(self):
@@ -253,7 +279,11 @@ class TestSwifter(unittest.TestCase):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = series.swifter.progress_bar(desc="Vec math apply ~ Series").apply(math_vec_square, axis=0)
+        swifter_val = (
+            series.swifter.set_npartitions(4)
+            .progress_bar(desc="Vec math apply ~ Series")
+            .apply(math_vec_square, axis=0)
+        )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -284,6 +314,22 @@ class TestSwifter(unittest.TestCase):
         self.assertEqual(pd_val, swifter_val)  # equality test
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
+
+
+class TestPandasDataFrame(TestSwifter):
+    def test_apply_on_empty_dataframe(self):
+        LOG.info("test_apply_on_empty_dataframe")
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.apply(math_vec_multiply, axis=1)
+        swifter_val = df.swifter.apply(math_vec_multiply, axis=1)
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_applymap_on_empty_dataframe(self):
+        LOG.info("test_applymap_on_empty_dataframe")
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.applymap(math_vec_square)
+        swifter_val = df.swifter.applymap(math_vec_square)
+        self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_small_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_small_dataframe")
@@ -323,7 +369,7 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_large_dataframe_broadcast(self):
         LOG.info("test_nonvectorized_math_apply_on_large_dataframe_broadcast")
-        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=250_000), "y": np.random.uniform(size=250_000)})
 
         tqdm.pandas(desc="Pandas Nonvec math apply + broadcast ~ DF")
         start_pd = time.time()
@@ -346,7 +392,7 @@ class TestSwifter(unittest.TestCase):
 
     def test_nonvectorized_math_apply_on_large_dataframe_reduce(self):
         LOG.info("test_nonvectorized_math_apply_on_large_dataframe_reduce")
-        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=250_000), "y": np.random.uniform(size=250_000)})
 
         tqdm.pandas(desc="Pandas Nonvec math apply + reduce ~ DF")
         start_pd = time.time()
@@ -367,8 +413,8 @@ class TestSwifter(unittest.TestCase):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
-    def test_nonvectorized_text_apply_on_large_dataframe(self):
-        LOG.info("test_nonvectorized_text_apply_on_large_dataframe")
+    def test_nonvectorized_text_dask_apply_on_large_dataframe(self):
+        LOG.info("test_nonvectorized_text_dask_apply_on_large_dataframe")
         df = pd.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
 
         tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
@@ -379,9 +425,9 @@ class TestSwifter(unittest.TestCase):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.set_npartitions(4)
-            .allow_dask_on_strings(True)
-            .progress_bar(desc="Nonvec text apply ~ DF")
+            df.swifter.allow_dask_on_strings(True)
+            .set_npartitions(4)
+            .progress_bar(desc="Nonvec Dask text apply ~ DF")
             .apply(text_foo, axis=1)
         )
         end_swifter = time.time()
@@ -391,96 +437,23 @@ class TestSwifter(unittest.TestCase):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
-    def test_nonvectorized_math_apply_on_small_rolling_dataframe(self):
-        LOG.info("test_nonvectorized_math_apply_on_small_rolling_dataframe")
-        df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
-        pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
-        swifter_val = (
-            df.swifter.rolling("1d").progress_bar(desc="Nonvec math apply ~ Rolling DF").apply(math_agg_foo, raw=True)
-        )
-        self.assertEqual(pd_val, swifter_val)  # equality test
+    def test_nonvectorized_text_modin_apply_on_large_dataframe(self):
+        LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe")
+        df = pd.DataFrame({"letter": ["I", "You", "We"] * 1_000_000, "value": ["want to break free"] * 3_000_000})
 
-    def test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar(self):
-        LOG.info("test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar")
-        df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
-        pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
-        swifter_val = df.swifter.rolling("1d").progress_bar(enable=False).apply(math_agg_foo, raw=True)
-        self.assertEqual(pd_val, swifter_val)  # equality test
-
-    def test_vectorized_math_apply_on_large_rolling_dataframe(self):
-        LOG.info("test_vectorized_math_apply_on_large_rolling_dataframe")
-        df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
-        )
-
+        tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
         start_pd = time.time()
-        pd_val = df.rolling("1d").apply(max, raw=True)
+        pd_val = df.progress_apply(clean_text_foo, axis=1)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.set_npartitions(4)
-            .rolling("1d")
-            .progress_bar(desc="Vec math apply ~ Rolling DF")
-            .apply(max, raw=True)
-        )
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
-
-        self.assertEqual(pd_val, swifter_val)  # equality test
-        if self.ncores > 1:  # speed test
-            self.assertLess(swifter_time, pd_time)
-
-    def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
-        LOG.info("test_nonvectorized_math_apply_on_large_rolling_dataframe")
-        df = pd.DataFrame(
-            {"x": np.arange(0, 3_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=3_000_000)
-        )
-
-        start_pd = time.time()
-        pd_val = df.rolling("3T").apply(math_agg_foo, raw=True)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
-
-        start_swifter = time.time()
-        swifter_val = (
-            df.swifter.set_npartitions(4)
-            .rolling("3T")
-            .progress_bar(desc="Nonvec math apply ~ Rolling DF")
-            .apply(math_agg_foo, raw=True)
-        )
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
-
-        self.assertEqual(pd_val, swifter_val)  # equality test
-        if self.ncores > 1:  # speed test
-            self.assertLess(swifter_time, pd_time)
-
-    def test_nonvectorized_math_apply_on_small_resampler_dataframe(self):
-        LOG.info("test_nonvectorized_math_apply_on_small_resampler_dataframe")
-        df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
-        pd_val = df.resample("1M").apply(math_agg_foo)
-        swifter_val = df.swifter.resample("1M").progress_bar(desc="Nonvec math apply ~ Resample DF").apply(math_agg_foo)
-        self.assertEqual(pd_val, swifter_val)  # equality test
-
-    def test_nonvectorized_math_apply_on_large_resampler_dataframe(self):
-        LOG.info("test_nonvectorized_math_apply_on_large_resampler_dataframe")
-        df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
-        )
-
-        start_pd = time.time()
-        pd_val = df.resample("3T").apply(math_agg_foo)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
-
-        start_swifter = time.time()
-        swifter_val = (
-            df.swifter.set_npartitions(4)
-            .resample("3T")
-            .progress_bar(desc="Nonvec math apply ~ Resample DF")
-            .apply(math_agg_foo)
+            df.swifter.allow_dask_on_strings(False)
+            .set_npartitions(4)
+            .set_ray_compute(num_cpus=2 if self.ncores >= 2 else 1, memory=0.25)
+            .progress_bar(desc="Nonvec Modin text apply ~ DF")
+            .apply(clean_text_foo, axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -533,7 +506,7 @@ class TestSwifter(unittest.TestCase):
         LOG.info("test_nonvectorized_math_applymap_on_small_dataframe")
         df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
         pd_val = df.applymap(math_foo)
-        swifter_val = df.swifter.applymap(math_foo)
+        swifter_val = df.swifter.set_npartitions(4).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar(self):
@@ -543,22 +516,153 @@ class TestSwifter(unittest.TestCase):
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
+
+class TestPandasTransformation(TestSwifter):
+    def test_rolling_apply_on_empty_dataframe(self):
+        LOG.info("test_rolling_apply_on_empty_dataframe")
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.rolling(1).apply(math_agg_foo, raw=True)
+        swifter_val = df.swifter.set_npartitions(4).rolling(1).apply(math_agg_foo, raw=True)
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_resample_apply_on_empty_dataframe(self):
+        LOG.info("test_resample_apply_on_empty_dataframe")
+        df = pd.DataFrame(columns=["x", "y"], index=pd.date_range(start="2020/01/01", periods=0))
+        pd_val = df.resample("1d").apply(math_agg_foo)
+        swifter_val = df.swifter.set_npartitions(4).resample("1d").apply(math_agg_foo)
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_nonvectorized_math_apply_on_small_rolling_dataframe(self):
+        LOG.info("test_nonvectorized_math_apply_on_small_rolling_dataframe")
+        df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
+        pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .rolling("1d")
+            .progress_bar(desc="Nonvec math apply ~ Rolling DF")
+            .apply(math_agg_foo, raw=True)
+        )
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar(self):
+        LOG.info("test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar")
+        df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
+        pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
+        swifter_val = (
+            df.swifter.set_npartitions(4).rolling("1d").progress_bar(enable=False).apply(math_agg_foo, raw=True)
+        )
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_vectorized_math_apply_on_large_rolling_dataframe(self):
+        LOG.info("test_vectorized_math_apply_on_large_rolling_dataframe")
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+        )
+
+        start_pd = time.time()
+        pd_val = df.rolling("1d").apply(max, raw=True)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .rolling("1d")
+            .progress_bar(desc="Vec math apply ~ Rolling DF")
+            .apply(max, raw=True)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
+        LOG.info("test_nonvectorized_math_apply_on_large_rolling_dataframe")
+        df = pd.DataFrame(
+            {"x": np.arange(0, 5_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=5_000_000)
+        )
+
+        start_pd = time.time()
+        pd_val = df.rolling("3T").apply(math_agg_foo, raw=True)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .rolling("3T")
+            .progress_bar(desc="Nonvec math apply ~ Rolling DF")
+            .apply(math_agg_foo, raw=True)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_math_apply_on_small_resampler_dataframe(self):
+        LOG.info("test_nonvectorized_math_apply_on_small_resampler_dataframe")
+        df = pd.DataFrame({"x": np.arange(0, 1000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1000))
+        pd_val = df.resample("1M").apply(math_agg_foo)
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .resample("1M")
+            .progress_bar(desc="Nonvec math apply ~ Resample DF")
+            .apply(math_agg_foo)
+        )
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_nonvectorized_math_apply_on_large_resampler_dataframe(self):
+        LOG.info("test_nonvectorized_math_apply_on_large_resampler_dataframe")
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
+        )
+
+        start_pd = time.time()
+        pd_val = df.resample("3T").apply(math_agg_foo)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .resample("3T")
+            .progress_bar(desc="Nonvec math apply ~ Resample DF")
+            .apply(math_agg_foo)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+
+class TestModinSeries(TestSwifter):
     def test_apply_on_empty_modin_series(self):
         LOG.info("test_apply_on_empty_series")
+        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
         series = md.Series()
         md_val = series.apply(math_foo, compare_to=1)
         swifter_val = series.swifter.apply(math_foo, compare_to=1)
         self.assertEqual(md_val, swifter_val)  # equality test
+        ray.shutdown()
 
-    def test_apply_on_empty_modin_dataframe(self):
-        LOG.info("test_apply_on_empty_series")
-        df = md.DataFrame()
-        md_val = df.apply(math_foo, compare_to=1)
-        swifter_val = df.swifter.apply(math_foo, compare_to=1)
+    def test_nonvectorized_modin_apply_on_small_series(self):
+        LOG.info("test_nonvectorized_modin_apply_on_small_series")
+        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        df = md.Series(np.random.normal(size=200_000), name="x")
+        md_val = df.apply(math_foo)
+        swifter_val = df.swifter.set_npartitions(4).apply(math_foo)
         self.assertEqual(md_val, swifter_val)  # equality test
+        ray.shutdown()
 
     def test_vectorized_modin_apply_on_large_series(self):
         LOG.info("test_vectorized_modin_apply_on_large_series")
+        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
         df = md.Series(np.random.normal(size=20_000_000), name="x")
         start_md = time.time()
         md_val = df.apply(math_vec_square, axis=0)
@@ -577,16 +681,31 @@ class TestSwifter(unittest.TestCase):
         self.assertEqual(md_val, swifter_val)  # equality test
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
+        ray.shutdown()
 
-    def test_nonvectorized_modin_apply_on_small_series(self):
-        LOG.info("test_nonvectorized_modin_apply_on_small_series")
-        df = md.Series(np.random.normal(size=200_000), name="x")
-        md_val = df.apply(math_foo)
-        swifter_val = df.swifter.set_npartitions(4).apply(math_foo)
+
+class TestModinDataFrame(TestSwifter):
+    def test_apply_on_empty_modin_dataframe(self):
+        LOG.info("test_apply_on_empty_series")
+        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        df = md.DataFrame()
+        md_val = df.apply(math_foo, compare_to=1)
+        swifter_val = df.swifter.apply(math_foo, compare_to=1)
         self.assertEqual(md_val, swifter_val)  # equality test
+        ray.shutdown()
+
+    def test_nonvectorized_modin_apply_on_small_dataframe(self):
+        LOG.info("test_nonvectorized_modin_apply_on_small_dataframe")
+        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        df = md.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
+        md_val = df.apply(text_foo, axis=1)
+        swifter_val = df.swifter.set_npartitions(4).apply(text_foo, axis=1)
+        self.assertEqual(md_val, swifter_val)  # equality test
+        ray.shutdown()
 
     def test_vectorized_modin_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_modin_apply_on_large_dataframe")
+        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
         df = md.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
         start_md = time.time()
         md_val = df.apply(math_vec_square, axis=1)
@@ -605,10 +724,4 @@ class TestSwifter(unittest.TestCase):
         self.assertEqual(md_val, swifter_val)  # equality test
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
-
-    def test_nonvectorized_modin_apply_on_small_dataframe(self):
-        LOG.info("test_nonvectorized_modin_apply_on_small_dataframe")
-        df = md.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
-        md_val = df.apply(text_foo, axis=1)
-        swifter_val = df.swifter.set_npartitions(4).apply(text_foo, axis=1)
-        self.assertEqual(md_val, swifter_val)  # equality test
+        ray.shutdown()

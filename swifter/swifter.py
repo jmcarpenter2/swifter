@@ -39,13 +39,12 @@ class _SwifterObject(_SwifterBaseObject):
         progress_bar_desc=None,
         allow_dask_on_strings=False,
     ):
-        super().__init__(base_obj=pandas_obj)
+        super().__init__(base_obj=pandas_obj, npartitions=npartitions)
         if self._obj.index.duplicated().any():
             warnings.warn(
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
             )
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
-        self.set_npartitions(npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
         self._progress_bar = progress_bar
@@ -97,13 +96,13 @@ class _SwifterObject(_SwifterBaseObject):
         }
         return Rolling(
             self._obj,
-            self._npartitions,
-            self._dask_threshold,
-            self._scheduler,
-            self._progress_bar,
-            self._progress_bar_desc,
-            self._allow_dask_on_strings,
-            **kwds
+            npartitions=self._npartitions,
+            dask_threshold=self._dask_threshold,
+            scheduler=self._scheduler,
+            progress_bar=self._progress_bar,
+            progress_bar_desc=self._progress_bar_desc,
+            allow_dask_on_strings=self._allow_dask_on_strings,
+            **kwds,
         )
 
     def resample(
@@ -136,12 +135,13 @@ class _SwifterObject(_SwifterBaseObject):
         }
         return Resampler(
             self._obj,
-            self._npartitions,
-            self._dask_threshold,
-            self._scheduler,
-            self._progress_bar,
-            self._progress_bar_desc,
-            **kwds
+            npartitions=self._npartitions,
+            dask_threshold=self._dask_threshold,
+            scheduler=self._scheduler,
+            progress_bar=self._progress_bar,
+            progress_bar_desc=self._progress_bar_desc,
+            allow_dask_on_strings=self._allow_dask_on_strings,
+            **kwds,
         )
 
 
@@ -252,6 +252,34 @@ class DataFrameAccessor(_SwifterObject):
 
         return wrapped
 
+    def _modin_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
+        sample = self._obj.iloc[: self._npartitions * 2, :]
+        try:
+            with suppress_stdout_stderr():
+                sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+                # check that the modin apply matches the pandas APPLY
+                tmp_df = (
+                    md.DataFrame(sample)
+                    .apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+                    ._to_pandas()
+                )
+                self._validate_apply(
+                    tmp_df.equals(sample_df), error_message="Modin apply sample does not match pandas apply sample."
+                )
+            output_df = (
+                md.DataFrame(self._obj)
+                .apply(func, *args, axis=axis, raw=raw, result_type=result_type, **kwds)
+                ._to_pandas()
+            )
+            return output_df
+        except ERRORS_TO_HANDLE:
+            if self._progress_bar:
+                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
+                apply_func = self._obj.progress_apply
+            else:
+                apply_func = self._obj.apply
+            return apply_func(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+
     def _dask_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         with suppress_stdout_stderr():
@@ -318,14 +346,11 @@ class DataFrameAccessor(_SwifterObject):
             est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
 
             # if pandas sample apply takes too long and not performing str processing, use dask
-            if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
-                if axis == 0:
-                    raise NotImplementedError(
-                        "Swifter cannot perform axis=0 applies on large datasets.\n"
-                        "Dask currently does not have an axis=0 apply implemented.\n"
-                        "More details at https://github.com/jmcarpenter2/swifter/issues/10"
-                    )
+            if (est_apply_duration > self._dask_threshold) and allow_dask_processing and axis == 1:
                 return self._dask_apply(func, axis, raw, result_type, *args, **kwds)
+            # if not dask, use modin for string processing
+            elif (est_apply_duration > self._dask_threshold) and axis == 1:
+                return self._modin_apply(func, axis, raw, result_type, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
                     tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
@@ -486,10 +511,16 @@ class Rolling(Transformation):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
-        **kwds
+        **kwds,
     ):
         super(Rolling, self).__init__(
-            pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
+            pandas_obj,
+            npartitions=npartitions,
+            dask_threshold=dask_threshold,
+            scheduler=scheduler,
+            progress_bar=progress_bar,
+            progress_bar_desc=progress_bar_desc,
+            allow_dask_on_strings=allow_dask_on_strings,
         )
         self._rolling_kwds = kwds.copy()
         self._comparison_pd = self._obj_pd.iloc[: self._npartitions * 2]
@@ -534,10 +565,16 @@ class Resampler(Transformation):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
-        **kwds
+        **kwds,
     ):
         super(Resampler, self).__init__(
-            pandas_obj, npartitions, dask_threshold, scheduler, progress_bar, progress_bar_desc, allow_dask_on_strings
+            pandas_obj,
+            npartitions=npartitions,
+            dask_threshold=dask_threshold,
+            scheduler=scheduler,
+            progress_bar=progress_bar,
+            progress_bar_desc=progress_bar_desc,
+            allow_dask_on_strings=allow_dask_on_strings,
         )
         self._resampler_kwds = kwds.copy()
         self._comparison_pd = self._obj_pd.iloc[: self._npartitions * 2]

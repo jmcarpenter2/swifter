@@ -148,7 +148,32 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_npartitions(2).apply(lambda x: x+1)
 ```
 
-## 8. `pandas.DataFrame.swifter.set_dask_threshold(dask_threshold=1).apply`
+## 8. `pandas.DataFrame.swifter.set_ray_compute(num_cpus=None, memory=None, **kwds).apply`
+
+Set the amount of compute used by ray for modin dataframes.
+
+`num_cpus`: the number of cpus used by ray multiprocessing
+
+`memory`: the amount of memory allocated to ray workers
+
+If a proportion of 1 is provided (0 < memory <= 1],
+    then that proportion of available memory is used
+
+If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
+    then that many bytes of memory are used
+
+`kwds`: key-word arguments to pass to `ray.init()`
+
+```python
+def pandas.DataFrame.swifter.set_ray_compute(num_cpus=None, memory=None, **kwds)
+```
+
+For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, using 2 partitions
+```python
+df.swifter.set_npartitions(2).apply(lambda x: x+1)
+```
+
+## 9. `pandas.DataFrame.swifter.set_dask_threshold(dask_threshold=1).apply`
 
 Specify the dask threshold (in seconds) for the max allowable time estimate for a pandas apply on the full dataframe
 ```python
@@ -160,7 +185,7 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_dask_threshold(dask_threshold=3).apply(lambda x: x+1)
 ```
 
-## 9. `pandas.DataFrame.swifter.set_dask_scheduler(scheduler="processes").apply`
+## 10. `pandas.DataFrame.swifter.set_dask_scheduler(scheduler="processes").apply`
 
 Set the dask scheduler
 
@@ -174,9 +199,9 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_dask_scheduler(scheduler="threads").apply(lambda x: x+1)
 ```
 
-## 10. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
+## 11. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
 
-Specify whether to allow dask to handle dataframes containing string types.  Dask can be particularly slow if you are actually manipulating strings, but if you just have a string column in your data frame this will allow dask to handle the execution.
+Default (enable=False) is to use Modin, which is faster than Dask for axis=1 string applies. This legacy flag allows the user to specify whether to allow dask to handle dataframes containing string types. Dask can be particularly slow if you are actually manipulating strings, but if you just have a string column in your data frame this will allow dask to handle the execution.
 ```python
 def pandas.DataFrame.swifter.allow_dask_on_strings(enable=True)
 ```
