@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import modin.pandas as md
 import swifter
+import ray
 
 from math import ceil, isclose
 from tqdm.auto import tqdm
@@ -92,6 +93,7 @@ class TestSwifter(unittest.TestCase):
         self.addTypeEqualityFunc(md.Series, self.assertModinSeriesEqual)
         self.addTypeEqualityFunc(md.DataFrame, self.assertModinDataFrameEqual)
         self.ncores = cpu_count()
+        ray.shutdown()
 
 
 class TestSetup(TestSwifter):
@@ -565,7 +567,6 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
-            .set_ray_compute(num_cpus=1, memory=0.01)
             .rolling("1d")
             .progress_bar(desc="Vec math apply ~ Rolling DF")
             .apply(max, raw=True)
@@ -591,7 +592,6 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
-            .set_ray_compute(num_cpus=1, memory=0.01)
             .rolling("3T")
             .progress_bar(desc="Nonvec math apply ~ Rolling DF")
             .apply(math_agg_foo, raw=True)
@@ -629,7 +629,6 @@ class TestPandasTransformation(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
-            .set_ray_memory(num_cpus=1, memory=0.01)
             .resample("3T")
             .progress_bar(desc="Nonvec math apply ~ Resample DF")
             .apply(math_agg_foo)
