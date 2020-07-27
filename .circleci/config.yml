@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.5
 jobs:
-  build:
+  unittest-lint-codecov:
     parallelism: 1
     resource_class: xlarge
     working_directory: ~/repo
@@ -31,4 +31,4 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - build
+      - unittest-lint-codecov

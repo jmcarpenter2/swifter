@@ -148,12 +148,21 @@ For example, let's say we have a pandas dataframe df. The following will perform
 df.swifter.set_npartitions(2).apply(lambda x: x+1)
 ```
 
-## 8. `pandas.DataFrame.swifter.set_ray_memory(memory=ceil(virtual_memory().available * 3 / 4)).apply`
+## 8. `pandas.DataFrame.swifter.set_ray_compute(num_cpus=None, memory=None, **kwds).apply`
 
-Specify the amount of memory in bytes available to swifter modin dataframes, if parallel processing is chosen to be the quickest apply.
-If a proportion of 1 is provided (0 < memory <= 1], then that proportion of available memory is used
-If a value greater than 1 is provided (1 < memory <= virtual_memory().available] then that many bytes of memory are used
-If no value provided for memory argument, then 3/4 of available memory will be used.
+Set the amount of compute used by ray for modin dataframes.
+
+`n_cpus`: the number of cpus used by ray multiprocessing
+
+`memory`: the amount of memory allocated to ray workers
+
+If a proportion of 1 is provided (0 < memory <= 1],
+    then that proportion of available memory is used
+
+If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
+    then that many bytes of memory are used
+
+`kwds`: key-word arguments to pass to `ray.init()`
 
 ```python
 def pandas.DataFrame.swifter.set_ray_memory(memory=ceil(virtual_memory().available * 3 / 4))
