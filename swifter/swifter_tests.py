@@ -367,7 +367,7 @@ class TestPandasDataFrame(TestSwifter):
 
     def test_nonvectorized_math_apply_on_large_dataframe_broadcast(self):
         LOG.info("test_nonvectorized_math_apply_on_large_dataframe_broadcast")
-        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=250_000), "y": np.random.uniform(size=250_000)})
 
         tqdm.pandas(desc="Pandas Nonvec math apply + broadcast ~ DF")
         start_pd = time.time()
@@ -390,7 +390,7 @@ class TestPandasDataFrame(TestSwifter):
 
     def test_nonvectorized_math_apply_on_large_dataframe_reduce(self):
         LOG.info("test_nonvectorized_math_apply_on_large_dataframe_reduce")
-        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=250_000), "y": np.random.uniform(size=250_000)})
 
         tqdm.pandas(desc="Pandas Nonvec math apply + reduce ~ DF")
         start_pd = time.time()
