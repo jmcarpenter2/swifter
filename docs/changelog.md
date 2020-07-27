@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.0.0 -- 2020-07-26
+## Version 1.0.0 -- 2020-07-27
 Two major enhancements are included in this release, both involving the use of modin in swifter. Special thanks to Devin Petersohn for the collaboration.
 
 1. Enable compatibility with modin dataframes. Compatibility not only allows modin dataframes to work with `df.swifter.apply(...)`, but still attempts to vectorize the operation which can lead to a performance boost.
