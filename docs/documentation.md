@@ -152,7 +152,7 @@ df.swifter.set_npartitions(2).apply(lambda x: x+1)
 
 Set the amount of compute used by ray for modin dataframes.
 
-`n_cpus`: the number of cpus used by ray multiprocessing
+`num_cpus`: the number of cpus used by ray multiprocessing
 
 `memory`: the amount of memory allocated to ray workers
 
