@@ -165,7 +165,7 @@ If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
 `kwds`: key-word arguments to pass to `ray.init()`
 
 ```python
-def pandas.DataFrame.swifter.set_ray_memory(memory=ceil(virtual_memory().available * 3 / 4))
+def pandas.DataFrame.swifter.set_ray_compute(num_cpus=None, memory=None, **kwds)
 ```
 
 For example, let's say we have a pandas dataframe df. The following will perform a swifter apply, using 2 partitions
