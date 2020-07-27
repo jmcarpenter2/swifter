@@ -53,7 +53,7 @@ class _SwifterBaseObject:
             self._npartitions = npartitions
         md.DEFAULT_NPARTITIONS = self._npartitions
         return self
-        
+
     def set_ray_compute(self, num_cpus=None, memory=None, **kwds):
         """
         Set the amount of compute used by ray for modin dataframes.
