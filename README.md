@@ -29,6 +29,12 @@ import pandas as pd
 import swifter
 ```
 
+...alternatively, `swifter` can be used with `modin` dataframes in the same manner:
+```python
+import modin.pandas as pd
+import swifter
+```
+
 ## Easy to use
 ```python
 df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': [5, 6, 7, 8]})
