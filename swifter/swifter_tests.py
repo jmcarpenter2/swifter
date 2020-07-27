@@ -610,9 +610,7 @@ class TestPandasTransformation(TestSwifter):
 
     def test_nonvectorized_math_apply_on_large_resampler_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_large_resampler_dataframe")
-        df = pd.DataFrame(
-            {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
-        )
+        df = pd.DataFrame({"x": np.arange(0, 500_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=500_000))
 
         start_pd = time.time()
         pd_val = df.resample("3T").apply(math_agg_foo)
