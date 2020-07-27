@@ -1,4 +1,3 @@
-import ray
 import timeit
 import warnings
 import numpy as np
