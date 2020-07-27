@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import swifter
 
-from math import ceil
+from math import ceil, isclose
 from tqdm.auto import tqdm
 
 from psutil import cpu_count, virtual_memory
@@ -115,18 +115,13 @@ class TestSetup(TestSwifter):
                     {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
                 ).swifter.resample("3T"),
             ],
-            [None, 0.5, 0.99, 100000],
-            [
-                ceil(virtual_memory().available * 3 / 4),
-                ceil(virtual_memory().available * 0.5),
-                ceil(virtual_memory().available * 0.99),
-                100000,
-            ],
+            [0.5, 0.99, 52428800],
+            [ceil(virtual_memory().available * 0.5), ceil(virtual_memory().available * 0.99), 52428800,],
         ):
             before = swifter_df._ray_memory
             swifter_df.set_ray_compute(num_cpus=1, memory=set_ray_memory)
             actual = swifter_df._ray_memory
-            self.assertEqual(actual, expected)
+            self.assertTrue(isclose(actual, expected, rel_tol=0.1))
             self.assertNotEqual(before, actual)
 
     def test_cant_set_ray_memory_OOM(self):
