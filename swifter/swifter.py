@@ -39,7 +39,7 @@ class _SwifterObject(_SwifterBaseObject):
         progress_bar_desc=None,
         allow_dask_on_strings=False,
     ):
-        super().__init__(base_obj=pandas_obj)
+        super().__init__(base_obj=pandas_obj, npartitions=npartitions)
         if self._obj.index.duplicated().any():
             warnings.warn(
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
