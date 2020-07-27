@@ -76,13 +76,13 @@ class TestSwifter(unittest.TestCase):
 
     def assertModinSeriesEqual(self, a, b, msg):
         try:
-            assert a.equals(b)
+            assert np.array_equal(a, b) & (a.shape == b.shape)
         except AssertionError as e:
             raise self.failureException(msg) from e
 
     def assertModinDataFrameEqual(self, a, b, msg):
         try:
-            assert a.equals(b)
+            assert np.array_equal(a, b) & (a.shape == b.shape)
         except AssertionError as e:
             raise self.failureException(msg) from e
 
