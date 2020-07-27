@@ -5,40 +5,30 @@ import pandas as pd
 
 from abc import abstractmethod
 from math import ceil
-from psutil import cpu_count
+from logging import config
 from dask import dataframe as dd
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
-from os import devnull
 
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
-ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
-try:
-    from numba.core.errors import TypingError
+from .base import (
+    _SwifterBaseObject,
+    suppress_stdout_stderr,
+    ERRORS_TO_HANDLE,
+    SAMPLE_SIZE,
+    N_REPEATS,
+)
+from .parallel_accessor import register_parallel_series_accessor, register_parallel_dataframe_accessor
 
-    ERRORS_TO_HANDLE.append(TypingError)
-except ImportError:
-    pass
-ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
+config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
+import modin.pandas as md
 
-SAMPLE_SIZE = 1000
-N_REPEATS = 3
-
-
-@contextmanager
-def suppress_stdout_stderr():
-    """
-    A context manager that redirects stdout and stderr to devnull
-    Used for avoiding repeated prints of the data during sample/test applies of Swifter
-    """
-    with open(devnull, "w") as fnull:
-        with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
-            yield (err, out)
+register_parallel_series_accessor(md.Series)
+register_parallel_dataframe_accessor(md.DataFrame)
 
 
-class _SwifterObject:
+class _SwifterObject(_SwifterBaseObject):
     def __init__(
         self,
         pandas_obj,
@@ -49,38 +39,18 @@ class _SwifterObject:
         progress_bar_desc=None,
         allow_dask_on_strings=False,
     ):
-        self._obj = pandas_obj
+        super().__init__(base_obj=pandas_obj)
         if self._obj.index.duplicated().any():
             warnings.warn(
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
             )
-        self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
-
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
+        self.set_npartitions(npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
         self._progress_bar = progress_bar
         self._progress_bar_desc = progress_bar_desc
         self._allow_dask_on_strings = allow_dask_on_strings
-
-    @staticmethod
-    def _validate_apply(expr, error_message):
-        if not expr:
-            raise ValueError(error_message)
-
-    def set_npartitions(self, npartitions=None):
-        """
-        Set the number of partitions to use for dask
-        """
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
-        return self
 
     def set_dask_threshold(self, dask_threshold=1):
         """
@@ -324,7 +294,6 @@ class DataFrameAccessor(_SwifterObject):
         """
         Apply the function to the DataFrame using swifter
         """
-
         # If there are no rows return early using Pandas
         if not self._nrows:
             return self._obj.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
