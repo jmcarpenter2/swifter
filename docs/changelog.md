@@ -1,9 +1,20 @@
 # Changelog
 
 ## Version 0.400 -- 2020-07-08
-Significantly speed up swifter axis=1 string applies by using modin, resolving a long-standing issue for swifter. Special thanks to Devin Petersohn for the collaboration.
-(1) Add Modin as a hard dependency
-(2) Use Modin for axis=1 string applies, unless allow_dask_on_strings(True) is set. If that flag is set, still use Dask.
+Two major enhancements are included in this release.
+
+1. Enable compatibility with modin dataframes. Compatibility not only allows modin dataframes to work with `df.swifter.apply(...)`, but still attempts to vectorize the operation which can lead to a performance boost.
+
+Example:
+```python
+
+import modin.pandas as pd
+df = pd.DataFrame(...)
+df.swifter.apply(...)
+```
+
+2. Significantly speed up swifter axis=1 string applies by using Modin, resolving a long-standing issue for swifter. Special thanks to Devin Petersohn for the collaboration.
+* Use Modin for axis=1 string applies, unless allow_dask_on_strings(True) is set. If that flag is set, still use Dask.
 
 ## Version 0.305
 (1) Remove Numba hard dependency, but still handle TypingErrors when numba is installed

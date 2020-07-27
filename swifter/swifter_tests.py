@@ -3,15 +3,17 @@ import unittest
 import subprocess
 import time
 import logging
+from math import ceil
+from psutil import cpu_count, virtual_memory
 
 import numpy as np
 import pandas as pd
+import modin.pandas as md
 import swifter
 
 from math import ceil, isclose
 from tqdm.auto import tqdm
 
-from psutil import cpu_count, virtual_memory
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -71,10 +73,24 @@ class TestSwifter(unittest.TestCase):
         except AssertionError as e:
             raise self.failureException(msg) from e
 
+    def assertModinSeriesEqual(self, a, b, msg):
+        try:
+            assert a.equals(b)
+        except AssertionError as e:
+            raise self.failureException(msg) from e
+
+    def assertModinDataFrameEqual(self, a, b, msg):
+        try:
+            assert a.equals(b)
+        except AssertionError as e:
+            raise self.failureException(msg) from e
+
     def setUp(self):
         LOG.info(f"Version {swifter.__version__}")
         self.addTypeEqualityFunc(pd.Series, self.assertSeriesEqual)
         self.addTypeEqualityFunc(pd.DataFrame, self.assertDataFrameEqual)
+        self.addTypeEqualityFunc(md.Series, self.assertModinSeriesEqual)
+        self.addTypeEqualityFunc(md.DataFrame, self.assertModinDataFrameEqual)
         self.ncores = cpu_count()
 
 
@@ -224,7 +240,7 @@ class TestSetup(TestSwifter):
         self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
 
-class TestSeries(TestSwifter):
+class TestPandasSeries(TestSwifter):
     def test_apply_on_empty_series(self):
         LOG.info("test_apply_on_empty_series")
         series = pd.Series()
@@ -298,7 +314,7 @@ class TestSeries(TestSwifter):
             self.assertLess(swifter_time, pd_time)
 
 
-class TestDataFrame(TestSwifter):
+class TestPandasDataFrame(TestSwifter):
     def test_apply_on_empty_dataframe(self):
         LOG.info("test_apply_on_empty_dataframe")
         df = pd.DataFrame(columns=["x", "y"])
@@ -499,7 +515,7 @@ class TestDataFrame(TestSwifter):
         self.assertEqual(pd_val, swifter_val)  # equality test
 
 
-class TestTransformation(TestSwifter):
+class TestPandasTransformation(TestSwifter):
     def test_rolling_apply_on_empty_dataframe(self):
         LOG.info("test_rolling_apply_on_empty_dataframe")
         df = pd.DataFrame(columns=["x", "y"])
@@ -616,3 +632,131 @@ class TestTransformation(TestSwifter):
         self.assertEqual(pd_val, swifter_val)  # equality test
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
+
+    def test_vectorized_math_applymap_on_large_dataframe(self):
+        LOG.info("test_vectorized_math_applymap_on_large_dataframe")
+        df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+
+        tqdm.pandas(desc="Pandas Vec math applymap ~ DF")
+        start_pd = time.time()
+        pd_val = df.progress_applymap(math_vec_square)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4).progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_square)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_math_applymap_on_large_dataframe(self):
+        LOG.info("test_nonvectorized_math_applymap_on_large_dataframe")
+        df = pd.DataFrame({"x": np.random.normal(size=5_000_000), "y": np.random.uniform(size=5_000_000)})
+
+        tqdm.pandas(desc="Pandas Nonvec math applymap ~ DF")
+        start_pd = time.time()
+        pd_val = df.progress_applymap(math_foo)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = df.swifter.set_npartitions(4).progress_bar(desc="Nonvec math applymap ~ DF").applymap(math_foo)
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_nonvectorized_math_applymap_on_small_dataframe(self):
+        LOG.info("test_nonvectorized_math_applymap_on_small_dataframe")
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
+        pd_val = df.applymap(math_foo)
+        swifter_val = df.swifter.applymap(math_foo)
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar(self):
+        LOG.info("test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar")
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
+        pd_val = df.applymap(math_foo)
+        swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
+class TestModinSeries(TestSwifter):
+    def test_apply_on_empty_modin_series(self):
+        LOG.info("test_apply_on_empty_series")
+        series = md.Series()
+        md_val = series.apply(math_foo, compare_to=1)
+        swifter_val = series.swifter.apply(math_foo, compare_to=1)
+        self.assertEqual(md_val, swifter_val)  # equality test
+
+    def test_nonvectorized_modin_apply_on_small_series(self):
+        LOG.info("test_nonvectorized_modin_apply_on_small_series")
+        df = md.Series(np.random.normal(size=200_000), name="x")
+        md_val = df.apply(math_foo)
+        swifter_val = df.swifter.set_npartitions(4).apply(math_foo)
+        self.assertEqual(md_val, swifter_val)  # equality test
+    
+    def test_vectorized_modin_apply_on_large_series(self):
+        LOG.info("test_vectorized_modin_apply_on_large_series")
+        df = md.Series(np.random.normal(size=20_000_000), name="x")
+        start_md = time.time()
+        md_val = df.apply(math_vec_square, axis=0)
+        md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        end_md = time.time()
+        md_time = end_md - start_md
+
+        start_swifter = time.time()
+        swifter_val = df.swifter.set_npartitions(4).apply(math_vec_square)
+        swifter_pd_val = (
+            swifter_val._to_pandas()
+        )  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(md_val, swifter_val)  # equality test
+        self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
+        self.assertLess(swifter_time, md_time)  # speed test
+
+class TestModinDataFrame(TestSwifter):
+    def test_apply_on_empty_modin_dataframe(self):
+        LOG.info("test_apply_on_empty_series")
+        df = md.DataFrame()
+        md_val = df.apply(math_foo, compare_to=1)
+        swifter_val = df.swifter.apply(math_foo, compare_to=1)
+        self.assertEqual(md_val, swifter_val)  # equality test
+
+    def test_nonvectorized_modin_apply_on_small_dataframe(self):
+        LOG.info("test_nonvectorized_modin_apply_on_small_dataframe")
+        df = md.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
+        md_val = df.apply(text_foo, axis=1)
+        swifter_val = df.swifter.set_npartitions(4).apply(text_foo, axis=1)
+        self.assertEqual(md_val, swifter_val)  # equality test
+
+
+    def test_vectorized_modin_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_modin_apply_on_large_dataframe")
+        df = md.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
+        start_md = time.time()
+        md_val = df.apply(math_vec_square, axis=1)
+        md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        end_md = time.time()
+        md_time = end_md - start_md
+
+        start_swifter = time.time()
+        swifter_val = df.swifter.set_npartitions(4).apply(math_vec_square, axis=1)
+        swifter_pd_val = (
+            swifter_val._to_pandas()
+        )  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(md_val, swifter_val)  # equality test
+        self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
+        self.assertLess(swifter_time, md_time)  # speed test
+

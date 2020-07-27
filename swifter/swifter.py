@@ -7,44 +7,29 @@ import pandas as pd
 from abc import abstractmethod
 from math import ceil
 from logging import config
-from psutil import cpu_count, virtual_memory
 from dask import dataframe as dd
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
-from os import devnull
 
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
+
+from .base import (
+    _SwifterBaseObject,
+    suppress_stdout_stderr,
+    ERRORS_TO_HANDLE,
+    SAMPLE_SIZE,
+    N_REPEATS,
+)
+from .parallel_accessor import register_parallel_series_accessor, register_parallel_dataframe_accessor
 
 config.dictConfig({"version": 1, "disable_existing_loggers": True})
 warnings.filterwarnings("ignore", category=FutureWarning)
 import modin.pandas as md
 
-ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
-try:
-    from numba.core.errors import TypingError
-
-    ERRORS_TO_HANDLE.append(TypingError)
-except ImportError:
-    pass
-ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
+register_parallel_series_accessor(md.Series)
+register_parallel_dataframe_accessor(md.DataFrame)
 
 
-SAMPLE_SIZE = 1000
-N_REPEATS = 3
-
-
-@contextmanager
-def suppress_stdout_stderr():
-    """
-    A context manager that redirects stdout and stderr to devnull
-    Used for avoiding repeated prints of the data during sample/test applies of Swifter
-    """
-    with open(devnull, "w") as fnull:
-        with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
-            yield (err, out)
-
-
-class _SwifterObject:
+class _SwifterObject(_SwifterBaseObject):
     def __init__(
         self,
         pandas_obj,
@@ -55,65 +40,17 @@ class _SwifterObject:
         progress_bar_desc=None,
         allow_dask_on_strings=False,
     ):
-        self._obj = pandas_obj
+        super().__init__(base_obj=pandas_obj)
         if self._obj.index.duplicated().any():
             warnings.warn(
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
             )
-        self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
-
-        self._ray_memory = None
-        self.set_npartitions(npartitions=npartitions)
         self._dask_threshold = dask_threshold
         self._scheduler = scheduler
         self._progress_bar = progress_bar
         self._progress_bar_desc = progress_bar_desc
         self._allow_dask_on_strings = allow_dask_on_strings
-
-    @staticmethod
-    def _validate_apply(expr, error_message):
-        if not expr:
-            raise ValueError(error_message)
-
-    def set_npartitions(self, npartitions=None):
-        """
-        Set the number of partitions to use for dask
-        """
-        if npartitions is None:
-            self._npartitions = cpu_count() * 2
-        else:
-            self._npartitions = npartitions
-        md.DEFAULT_NPARTITIONS = self._npartitions
-        return self
-
-    def set_ray_compute(self, num_cpus=None, memory=None, **kwds):
-        """
-        Set the amount of compute used by ray for modin dataframes.
-
-        Args:
-            n_cpus: the number of cpus used by ray multiprocessing
-            memory: the amount of memory allocated to ray workers
-                If a proportion of 1 is provided (0 < memory <= 1],
-                    then that proportion of available memory is used
-                If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
-                    then that many bytes of memory are used
-            kwds: key-word arguments to pass to `ray.init()`
-        """
-        if memory is None:
-            self._ray_memory = memory
-        elif 0 < memory <= 1:
-            self._ray_memory = ceil(virtual_memory().available * memory)
-        elif 1 < memory <= virtual_memory().available:
-            self._ray_memory = ceil(memory)
-        else:
-            raise MemoryError(
-                f"Cannot allocate {memory} bytes of memory to ray. "
-                f"Only {virtual_memory().available} bytes are currently available."
-            )
-        ray.shutdown()
-        ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
-        return self
 
     def set_dask_threshold(self, dask_threshold=1):
         """
@@ -385,7 +322,6 @@ class DataFrameAccessor(_SwifterObject):
         """
         Apply the function to the DataFrame using swifter
         """
-
         # If there are no rows return early using Pandas
         if not self._nrows:
             return self._obj.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)

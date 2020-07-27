@@ -9,7 +9,7 @@
 3. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules. 
 
 
-## 1. `pandas.Series.swifter.apply`
+## 1. `pandas.Series.swifter.apply` OR `modin.pandas.Series.swifter.apply`
 
 Efficiently apply any function to a pandas series in the fastest available manner
 
@@ -30,7 +30,7 @@ def pandas.Series.swifter.apply(func, convert_dtype=True, args=(), **kwds)
 NOTE: docstring taken from pandas documentation.
 
 
-## 2. `pandas.DataFrame.swifter.apply`
+## 2. `pandas.DataFrame.swifter.apply` OR `modin.pandas.DataFrame.swifter.apply`
 
 Efficiently apply any function to a pandas dataframe in the fastest available manner.
 
