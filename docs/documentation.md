@@ -210,3 +210,8 @@ For example, let's say we have a pandas dataframe df. The following will allow D
 ```python
 df.swifter.allow_dask_on_strings().apply(lambda x: x+1)
 ```
+
+## 12. `swifter.register_modin()`
+
+This gives access to `modin.DataFrame.swifter.apply(...)` and `modin.Series.swifter.apply(...)`. This registers modin dataframes and series with swifter as accessors.
+* NOTE: This is only necessary if you import swifter BEFORE modin. If you import modin before swifter you do not need to execute this method.

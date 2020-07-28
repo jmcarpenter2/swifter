@@ -1,3 +1,4 @@
+import sys
 import timeit
 import warnings
 import numpy as np
@@ -5,7 +6,6 @@ import pandas as pd
 
 from abc import abstractmethod
 from math import ceil
-from logging import config
 from dask import dataframe as dd
 
 from tqdm.auto import tqdm
@@ -18,14 +18,6 @@ from .base import (
     SAMPLE_SIZE,
     N_REPEATS,
 )
-from .parallel_accessor import register_parallel_series_accessor, register_parallel_dataframe_accessor
-
-config.dictConfig({"version": 1, "disable_existing_loggers": True})
-warnings.filterwarnings("ignore", category=FutureWarning)
-import modin.pandas as md
-
-register_parallel_series_accessor(md.Series)
-register_parallel_dataframe_accessor(md.DataFrame)
 
 
 class _SwifterObject(_SwifterBaseObject):
@@ -256,6 +248,8 @@ class DataFrameAccessor(_SwifterObject):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         try:
             with suppress_stdout_stderr():
+                import modin.pandas as md
+
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 # check that the modin apply matches the pandas APPLY
                 tmp_df = (

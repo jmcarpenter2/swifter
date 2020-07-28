@@ -34,6 +34,8 @@ import swifter
 import modin.pandas as pd
 import swifter
 ```
+NOTE: if you import swifter before modin, you will have to additionally register modin: `swifter.register_modin()`
+
 
 ## Easy to use
 ```python
@@ -71,6 +73,8 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 
 2. Please upgrade your version of pandas, as the pandas extension api used in this module is a recent addition to pandas.
 
-3. Do not use swifter to apply a function that modifies external variables. Under the hood, swifter does sample applies to optimize performance. These sample applies will modify the external variable in addition to the final apply. Thus, you will end up with an erroneously modified external variable.
+3. Import modin before importing swifter, if you wish to use modin with swifter. Otherwise, use `swifter.register_modin()` to access it.
 
-4. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules. 
+4. Do not use swifter to apply a function that modifies external variables. Under the hood, swifter does sample applies to optimize performance. These sample applies will modify the external variable in addition to the final apply. Thus, you will end up with an erroneously modified external variable.
+
+5. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules.

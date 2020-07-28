@@ -1,10 +1,8 @@
+import sys
 from os import devnull
 from math import ceil
 from psutil import cpu_count, virtual_memory
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
-import modin.pandas as md
-import ray
-
 
 ERRORS_TO_HANDLE = [AttributeError, ValueError, TypeError, KeyError]
 try:
@@ -50,7 +48,11 @@ class _SwifterBaseObject:
             self._npartitions = cpu_count() * 2
         else:
             self._npartitions = npartitions
-        md.DEFAULT_NPARTITIONS = self._npartitions
+
+        if "modin.pandas" in sys.modules:
+            import modin.pandas as md
+
+            md.DEFAULT_NPARTITIONS = self._npartitions
         return self
 
     def set_ray_compute(self, num_cpus=None, memory=None, **kwds):
@@ -66,6 +68,8 @@ class _SwifterBaseObject:
                     then that many bytes of memory are used
             kwds: key-word arguments to pass to `ray.init()`
         """
+        import ray
+
         if memory is None:
             self._ray_memory = memory
         elif 0 < memory <= 1:

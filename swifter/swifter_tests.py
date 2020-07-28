@@ -7,10 +7,9 @@ from math import ceil
 from psutil import cpu_count, virtual_memory
 
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
-import modin.pandas as md
 import swifter
-import ray
 
 from math import ceil, isclose
 from tqdm.auto import tqdm
@@ -76,24 +75,33 @@ class TestSwifter(unittest.TestCase):
 
     def assertModinSeriesEqual(self, a, b, msg):
         try:
-            assert np.array_equal(a, b) & (a.shape == b.shape)
+            npt.assert_array_almost_equal(a, b)
         except AssertionError as e:
             raise self.failureException(msg) from e
 
     def assertModinDataFrameEqual(self, a, b, msg):
         try:
-            assert np.array_equal(a, b) & (a.shape == b.shape)
+            npt.assert_array_almost_equal(a, b)
         except AssertionError as e:
             raise self.failureException(msg) from e
+
+    def modinSetUp(self):
+        """
+        Imports modin before swifter so that we have access to modin functionality
+        """
+        import modin.pandas as md
+        import swifter
+
+        swifter.register_modin()
+        self.addTypeEqualityFunc(md.Series, self.assertModinSeriesEqual)
+        self.addTypeEqualityFunc(md.DataFrame, self.assertModinDataFrameEqual)
+        return md
 
     def setUp(self):
         LOG.info(f"Version {swifter.__version__}")
         self.addTypeEqualityFunc(pd.Series, self.assertSeriesEqual)
         self.addTypeEqualityFunc(pd.DataFrame, self.assertDataFrameEqual)
-        self.addTypeEqualityFunc(md.Series, self.assertModinSeriesEqual)
-        self.addTypeEqualityFunc(md.DataFrame, self.assertModinDataFrameEqual)
         self.ncores = cpu_count()
-        ray.shutdown()
 
 
 class TestSetup(TestSwifter):
@@ -139,7 +147,7 @@ class TestSetup(TestSwifter):
             before = swifter_df._ray_memory
             swifter_df.set_ray_compute(num_cpus=1, memory=set_ray_memory)
             actual = swifter_df._ray_memory
-            self.assertTrue(isclose(actual, expected, rel_tol=0.1))
+            self.assertTrue(isclose(actual, expected, rel_tol=0.2))
             self.assertNotEqual(before, actual)
 
     def test_cant_set_ray_memory_OOM(self):
@@ -644,26 +652,24 @@ class TestPandasTransformation(TestSwifter):
 class TestModinSeries(TestSwifter):
     def test_apply_on_empty_modin_series(self):
         LOG.info("test_apply_on_empty_series")
-        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        md = self.modinSetUp()
         series = md.Series()
         md_val = series.apply(math_foo, compare_to=1)
         swifter_val = series.swifter.apply(math_foo, compare_to=1)
         self.assertEqual(md_val, swifter_val)  # equality test
-        ray.shutdown()
 
     def test_nonvectorized_modin_apply_on_small_series(self):
         LOG.info("test_nonvectorized_modin_apply_on_small_series")
-        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        md = self.modinSetUp()
         df = md.Series(np.random.normal(size=200_000), name="x")
         md_val = df.apply(math_foo)
         swifter_val = df.swifter.set_npartitions(4).apply(math_foo)
         self.assertEqual(md_val, swifter_val)  # equality test
-        ray.shutdown()
 
     def test_vectorized_modin_apply_on_large_series(self):
         LOG.info("test_vectorized_modin_apply_on_large_series")
-        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
-        df = md.Series(np.random.normal(size=20_000_000), name="x")
+        md = self.modinSetUp()
+        df = md.Series(np.random.uniform(size=20_000_000), name="x")
         start_md = time.time()
         md_val = df.apply(math_vec_square, axis=0)
         md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
@@ -681,31 +687,28 @@ class TestModinSeries(TestSwifter):
         self.assertEqual(md_val, swifter_val)  # equality test
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
-        ray.shutdown()
 
 
 class TestModinDataFrame(TestSwifter):
     def test_apply_on_empty_modin_dataframe(self):
         LOG.info("test_apply_on_empty_series")
-        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        md = self.modinSetUp()
         df = md.DataFrame()
         md_val = df.apply(math_foo, compare_to=1)
         swifter_val = df.swifter.apply(math_foo, compare_to=1)
         self.assertEqual(md_val, swifter_val)  # equality test
-        ray.shutdown()
 
     def test_nonvectorized_modin_apply_on_small_dataframe(self):
         LOG.info("test_nonvectorized_modin_apply_on_small_dataframe")
-        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        md = self.modinSetUp()
         df = md.DataFrame({"letter": ["A", "B", "C", "D", "E"] * 200_000, "value": np.random.normal(size=1_000_000)})
         md_val = df.apply(text_foo, axis=1)
         swifter_val = df.swifter.set_npartitions(4).apply(text_foo, axis=1)
         self.assertEqual(md_val, swifter_val)  # equality test
-        ray.shutdown()
 
     def test_vectorized_modin_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_modin_apply_on_large_dataframe")
-        ray.init(num_cpus=2 if self.ncores >= 2 else 1, memory=ceil(virtual_memory().available / 4))
+        md = self.modinSetUp()
         df = md.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})
         start_md = time.time()
         md_val = df.apply(math_vec_square, axis=1)
@@ -724,4 +727,3 @@ class TestModinDataFrame(TestSwifter):
         self.assertEqual(md_val, swifter_val)  # equality test
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
-        ray.shutdown()
