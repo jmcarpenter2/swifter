@@ -81,3 +81,13 @@ def register_parallel_dataframe_accessor(dataframe_to_register):
         self.swifter = ParallelDataFrameAccessor(self)
 
     dataframe_to_register.__init__ = new_init
+
+
+def register_modin():
+    """
+    Register modin's series/dataframe as parallel accessors
+    """
+    from modin.pandas import Series, DataFrame
+
+    register_parallel_series_accessor(Series)
+    register_parallel_dataframe_accessor(DataFrame)

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.0.1 -- 2020-07-27
+* Reduce resources consumed by swifter by only importing modin/ray when necessary.
+* Added `swifter.register_modin()` function, which gives access to `modin.DataFrame.swifter.apply(...)`, but is only required if modin is imported after swifter. If you import modin before swifter, this is not necessary.
+
 ## Version 1.0.0 -- 2020-07-27
 Two major enhancements are included in this release, both involving the use of modin in swifter. Special thanks to Devin Petersohn for the collaboration.
 
