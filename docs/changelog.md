@@ -15,6 +15,7 @@ df.swifter.apply(...)
 
 2. Significantly speed up swifter axis=1 string applies by using Modin, resolving a long-standing issue for swifter.
 * Use Modin for axis=1 string applies, unless allow_dask_on_strings(True) is set. If that flag is set, still use Dask.
+* NOTE: this means that allow_dask_on_strings() is no longer required to work with text data using swifter.
 
 ## Version 0.305
 (1) Remove Numba hard dependency, but still handle TypingErrors when numba is installed
