@@ -591,7 +591,7 @@ class TestPandasTransformation(TestSwifter):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.set_npartitions(4)
+            df.swifter.set_npartitions(8)
             .rolling("3T")
             .progress_bar(desc="Nonvec math apply ~ Rolling DF")
             .apply(math_agg_foo, raw=True)
