@@ -581,7 +581,7 @@ class TestPandasTransformation(TestSwifter):
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_large_rolling_dataframe")
         df = pd.DataFrame(
-            {"x": np.arange(0, 10_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10_000_000)
+            {"x": np.arange(0, 7_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=7_000_000)
         )
 
         start_pd = time.time()
@@ -591,7 +591,7 @@ class TestPandasTransformation(TestSwifter):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.set_npartitions(8)
+            df.swifter.set_npartitions(7)
             .rolling("3T")
             .progress_bar(desc="Nonvec math apply ~ Rolling DF")
             .apply(math_agg_foo, raw=True)
