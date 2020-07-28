@@ -6,7 +6,6 @@ import pandas as pd
 
 from abc import abstractmethod
 from math import ceil
-from logging import config
 from dask import dataframe as dd
 
 from tqdm.auto import tqdm
@@ -19,10 +18,6 @@ from .base import (
     SAMPLE_SIZE,
     N_REPEATS,
 )
-from .parallel_accessor import register_modin
-
-config.dictConfig({"version": 1, "disable_existing_loggers": True})
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class _SwifterObject(_SwifterBaseObject):
