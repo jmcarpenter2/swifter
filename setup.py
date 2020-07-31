@@ -10,6 +10,6 @@ setup(
     url="https://github.com/jmcarpenter2/swifter",  # use the URL to the github repo
     download_url="https://github.com/jmcarpenter2/swifter/archive/1.0.1.tar.gz",
     keywords=["pandas", "dask", "apply", "function", "parallelize", "vectorize"],
-    install_requires=["pandas>=0.23.0", "psutil>=5.6.6", "dask[complete]>=0.19.0", "tqdm>=4.33.0", "ipywidgets>=7.0.0", "parso>0.4.0", "bleach>=3.1.1", "modin[ray]>=0.7.4", "pickle5>=0.0.11"],
+    install_requires=["pandas>=0.23.0", "psutil>=5.6.6", "dask[complete]>=0.19.0", "tqdm>=4.33.0", "ipywidgets>=7.0.0", "parso>0.4.0", "bleach>=3.1.1", "modin[ray]>=0.7.4"],
     classifiers=[],
 )

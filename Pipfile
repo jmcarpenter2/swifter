@@ -19,7 +19,6 @@ ipywidgets = ">=7.0.0"
 bleach = ">=3.1.1"
 parso = ">0.4.0"
 modin = {extras = ["ray"],version = ">=0.7.4"}
-pickle5 = "==0.0.11"
 
 [requires]
 python_version = "3.7"
