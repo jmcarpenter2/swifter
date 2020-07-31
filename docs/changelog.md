@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 1.0.2 -- 2020-07-31
+* Remove pickle5 hard dependency
+
 ## Version 1.0.1 -- 2020-07-27
 * Reduce resources consumed by swifter by only importing modin/ray when necessary.
 * Added `swifter.register_modin()` function, which gives access to `modin.DataFrame.swifter.apply(...)`, but is only required if modin is imported after swifter. If you import modin before swifter, this is not necessary.
