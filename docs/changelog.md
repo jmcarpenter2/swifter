@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 1.0.3 -- 2020-08-03
+* Fixed bug with string, axis=1 applies for pandas dataframes that prevented swifter from leveraging modin for parallelization when returning a series instead of a dataframe
+
 ## Version 1.0.2 -- 2020-07-31
 * Remove pickle5 hard dependency
 
