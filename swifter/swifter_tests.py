@@ -470,6 +470,31 @@ class TestPandasDataFrame(TestSwifter):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
+    def test_nonvectorized_text_modin_apply_on_large_dataframe_returns_series(self):
+        LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe_returns_series")
+        df = pd.DataFrame({"str_date": ["2000/01/01 00:00:00"] * 1_000_000})
+
+        tqdm.pandas(desc="Pandas Nonvec text apply ~ DF -> Srs")
+        start_pd = time.time()
+        pd_val = df.progress_apply(lambda row: row["str_date"].split()[0], axis=1)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.allow_dask_on_strings(False)
+            .set_npartitions(4)
+            .set_ray_compute(num_cpus=2 if self.ncores >= 2 else 1, memory=0.25)
+            .progress_bar(desc="Nonvec Modin text apply ~ DF -> Srs")
+            .apply(lambda row: row["str_date"].split()[0], axis=1)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
     def test_vectorized_math_applymap_on_large_dataframe(self):
         LOG.info("test_vectorized_math_applymap_on_large_dataframe")
         df = pd.DataFrame({"x": np.random.normal(size=1_000_000), "y": np.random.uniform(size=1_000_000)})

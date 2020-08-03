@@ -247,6 +247,7 @@ class DataFrameAccessor(_SwifterObject):
     def _modin_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         try:
+            series = False
             with suppress_stdout_stderr():
                 import modin.pandas as md
 
@@ -257,6 +258,9 @@ class DataFrameAccessor(_SwifterObject):
                     .apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                     ._to_pandas()
                 )
+                if isinstance(sample_df, pd.Series) and isinstance(tmp_df, pd.DataFrame):
+                    tmp_df = pd.Series(tmp_df.values[:, 0])
+                    series = True
                 self._validate_apply(
                     tmp_df.equals(sample_df), error_message="Modin apply sample does not match pandas apply sample."
                 )
@@ -265,7 +269,7 @@ class DataFrameAccessor(_SwifterObject):
                 .apply(func, *args, axis=axis, raw=raw, result_type=result_type, **kwds)
                 ._to_pandas()
             )
-            return output_df
+            return pd.Series(output_df.values[:, 0]) if series else output_df
         except ERRORS_TO_HANDLE:
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
