@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.0.4 -- 2020-09-19
+* Added warnings/errors for swifter methods which do not exist when using modin dataframes
+* Updated Dask Dataframe dependencies to require a more recent version
+* Updated examples/speed benchmark notebooks
+
 ## Version 1.0.3 -- 2020-08-03
 * Fixed bug with string, axis=1 applies for pandas dataframes that prevented swifter from leveraging modin for parallelization when returning a series instead of a dataframe
 
