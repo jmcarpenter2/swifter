@@ -3,7 +3,58 @@ import warnings
 from .base import _SwifterBaseObject, ERRORS_TO_HANDLE, suppress_stdout_stderr
 
 
-class ParallelSeriesAccessor(_SwifterBaseObject):
+class _SwifterParallelBaseObject(_SwifterBaseObject):
+    def set_dask_threshold(self, dask_threshold=1):
+        """
+        Set the threshold (seconds) for maximum allowed estimated duration of pandas apply before switching to dask
+        """
+        warnings.warn("Parallel Accessor does not use Dask.")
+
+    def set_dask_scheduler(self, scheduler="processes"):
+        """
+        Set the dask scheduler
+        :param scheduler: String, ["threads", "processes"]
+        """
+        warnings.warn("Parallel Accessor does not use Dask.")
+
+    def progress_bar(self, enable=True, desc=None):
+        """
+        Turn on/off the progress bar, and optionally add a custom description
+        """
+        warnings.warn("Parallel Accessor does not use have a progress bar.")
+
+    def allow_dask_on_strings(self, enable=True):
+        """
+        Override the string processing default, which is to not use dask if a string is contained in the pandas object
+        """
+        warnings.warn("Parallel Accessor does not use Dask.")
+
+    def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
+        """
+        Create a swifter rolling object
+        """
+        raise NotImplementedError("Parallel Accessor cannot create Rolling objects.")
+
+    def resample(
+        self,
+        rule,
+        axis=0,
+        closed=None,
+        label=None,
+        convention="start",
+        kind=None,
+        loffset=None,
+        base=0,
+        on=None,
+        level=None,
+    ):
+        """
+        Create a swifter resampler object
+        """
+        raise NotImplementedError("Parallel Accessor cannot create Resampler objects.")
+
+
+class ParallelSeriesAccessor(_SwifterParallelBaseObject):
     def apply(self, func, convert_dtype=True, args=(), **kwds):
         """
         Apply the function to the Series using swifter
@@ -31,7 +82,7 @@ class ParallelSeriesAccessor(_SwifterBaseObject):
             return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
 
-class ParallelDataFrameAccessor(_SwifterBaseObject):
+class ParallelDataFrameAccessor(_SwifterParallelBaseObject):
     def apply(self, func, axis=0, raw=False, result_type=None, args=(), **kwds):
         """
         Apply the function to the Parallel DataFrame using swifter
