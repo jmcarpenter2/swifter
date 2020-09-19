@@ -79,4 +79,4 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 
 5. It is advised to disable the progress bar if calling swifter from a forked process as the progress bar may get confused between various multiprocessing modules.
 
-6. If swifter return is diffrent than pandas try explicitly casting type e.g. `df.swifter.apply(lambda x: float(np.angle(x)))`
+6. If swifter return is different than pandas try explicitly casting type e.g.: `df.swifter.apply(lambda x: float(np.angle(x)))`
