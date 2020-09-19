@@ -3,6 +3,7 @@ import unittest
 import subprocess
 import time
 import logging
+import warnings
 from math import ceil
 from psutil import cpu_count, virtual_memory
 
@@ -679,6 +680,40 @@ class TestPandasTransformation(TestSwifter):
 
 
 class TestModinSeries(TestSwifter):
+    def test_modin_series_warns_on_missing_attributes(self):
+        LOG.info("test_modin_series_warns_on_missing_attributes")
+        md = self.modinSetUp()
+        series = md.Series()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            series.swifter.set_dask_threshold(1)
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            series.swifter.set_dask_scheduler("threads")
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            series.swifter.allow_dask_on_strings(True)
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            series.swifter.progress_bar(False)
+            self.assertEqual(len(w), 1)
+
+    def test_modin_series_errors_on_missing_transformations(self):
+        LOG.info("test_modin_series_errors_on_missing_transformations")
+        md = self.modinSetUp()
+        series = md.Series()
+        with self.assertRaises(NotImplementedError):
+            series.swifter.rolling(1)
+
+        with self.assertRaises(NotImplementedError):
+            series.swifter.resample(1)
+
     def test_apply_on_empty_modin_series(self):
         LOG.info("test_apply_on_empty_series")
         md = self.modinSetUp()
@@ -719,6 +754,40 @@ class TestModinSeries(TestSwifter):
 
 
 class TestModinDataFrame(TestSwifter):
+    def test_modin_dataframe_warns_on_missing_attributes(self):
+        LOG.info("test_modin_dataframe_warns_on_missing_attributes")
+        md = self.modinSetUp()
+        df = md.DataFrame()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            df.swifter.set_dask_threshold(1)
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            df.swifter.set_dask_scheduler("threads")
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            df.swifter.allow_dask_on_strings(True)
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            df.swifter.progress_bar(False)
+            self.assertEqual(len(w), 1)
+
+    def test_modin_dataframe_errors_on_missing_transformations(self):
+        LOG.info("test_modin_dataframe_errors_on_missing_transformations")
+        md = self.modinSetUp()
+        df = md.DataFrame()
+        with self.assertRaises(NotImplementedError):
+            df.swifter.rolling(1)
+
+        with self.assertRaises(NotImplementedError):
+            df.swifter.resample(1)
+
     def test_apply_on_empty_modin_dataframe(self):
         LOG.info("test_apply_on_empty_series")
         md = self.modinSetUp()
