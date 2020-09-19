@@ -142,7 +142,11 @@ class TestSetup(TestSwifter):
                 ).swifter.resample("3T"),
             ],
             [0.5, 0.99, 52428800],
-            [ceil(virtual_memory().available * 0.5), ceil(virtual_memory().available * 0.99), 52428800,],
+            [
+                ceil(virtual_memory().available * 0.5),
+                ceil(virtual_memory().available * 0.99),
+                52428800,
+            ],
         ):
             before = swifter_df._ray_memory
             swifter_df.set_ray_compute(num_cpus=1, memory=set_ray_memory)
