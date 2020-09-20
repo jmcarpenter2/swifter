@@ -9,6 +9,7 @@ class _SwifterParallelBaseObject(_SwifterBaseObject):
         Set the threshold (seconds) for maximum allowed estimated duration of pandas apply before switching to dask
         """
         warnings.warn("Parallel Accessor does not use Dask.")
+        return self
 
     def set_dask_scheduler(self, scheduler="processes"):
         """
@@ -16,18 +17,21 @@ class _SwifterParallelBaseObject(_SwifterBaseObject):
         :param scheduler: String, ["threads", "processes"]
         """
         warnings.warn("Parallel Accessor does not use Dask.")
+        return self
 
     def progress_bar(self, enable=True, desc=None):
         """
         Turn on/off the progress bar, and optionally add a custom description
         """
         warnings.warn("Parallel Accessor does not use have a progress bar.")
+        return self
 
     def allow_dask_on_strings(self, enable=True):
         """
         Override the string processing default, which is to not use dask if a string is contained in the pandas object
         """
         warnings.warn("Parallel Accessor does not use Dask.")
+        return self
 
     def rolling(self, window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None):
         """
