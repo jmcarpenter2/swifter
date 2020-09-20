@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 1.0.6 -- 2020-09-19
+* Fix warnings introduced in 1.0.5 to appropriate warn when using an apply function
+
 ## Version 1.0.5 -- 2020-09-19
 * Added warnings/errors for swifter methods which do not exist when using modin dataframes
 * Updated Dask Dataframe dependencies to require a more recent version
