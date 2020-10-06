@@ -1,9 +1,61 @@
+import sys
 import numpy as np
 import warnings
 from .base import _SwifterBaseObject, ERRORS_TO_HANDLE, suppress_stdout_stderr
 
 
 class _SwifterParallelBaseObject(_SwifterBaseObject):
+    @staticmethod
+    def _check_modin_frame():
+        if "modin.pandas" in sys.modules:
+            from modin.pandas import DataFrame, Series
+
+            if isinstance(self._obj, DataFrame) or isinstance(self._obj, Series):
+                return True
+        return False
+
+    def _apply_registered_function(self, registered_func, other=None):
+        qc = self._obj._query_compiler
+        applied_qc = registered_func(qc, other=other) if other else registered_func(qc)
+        self._obj._query_compiler = applied_qc
+        return self._obj
+
+    def binary(self, func, other, **kwargs):
+        if self._check_modin_frame():
+            from modin.data_management.functions import BinaryFunction
+
+            binary_func = BinaryFunction.register(func, **kwargs)
+            return self._apply_registered_function(binary_func, other=other)
+        else:
+            raise NotImplementedError("Only Modin DataFrames have access to swifter binary functions.")
+
+    def map(self, func, **kwargs):
+        if self._check_modin_frame():
+            from modin.data_management.functions import MapFunction
+
+            map_func = MapFunction.register(func, **kwargs)
+            return self._apply_registered_function(map_func)
+        else:
+            raise NotImplementedError("Only Modin DataFrames have access to swifter map functions.")
+
+    def reduction(self, func, **kwargs):
+        if self._check_modin_frame():
+            from modin.data_management.functions import ReductionFunction
+
+            reduction_func = ReductionFunction.register(func, **kwargs)
+            return self._apply_registered_function(reduction_func)
+        else:
+            raise NotImplementedError("Only Modin DataFrames have access to reduction functions.")
+
+    def map_reduce(self, map_func, reduce_func, **kwargs):
+        if self._check_modin_frame():
+            from modin.data_management.functions import MapReduceFunction
+
+            map_reduce_func = MapReduceFunction.register(map_func, reduce_func, **kwargs)
+            return self._apply_registered_function(map_reduce_func)
+        else:
+            raise NotImplementedError("Only Modin DataFrames have access to swifter map reduce functions.")
+
     def set_dask_threshold(self, dask_threshold=1):
         """
         Set the threshold (seconds) for maximum allowed estimated duration of pandas apply before switching to dask
