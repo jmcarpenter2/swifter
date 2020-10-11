@@ -8,6 +8,9 @@ jobs:
     working_directory: ~/repo
     docker:
       - image: python:3.7
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
 
     steps:
       - checkout
