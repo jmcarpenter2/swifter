@@ -89,5 +89,8 @@ class _SwifterBaseObject:
                 f"Only {virtual_memory().available} bytes are currently available."
             )
         ray.shutdown()
-        ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
+        try:
+            ray.init(num_cpus=num_cpus, _memory=self._ray_memory, **kwds)
+        except TypeError:
+            ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
         return self
