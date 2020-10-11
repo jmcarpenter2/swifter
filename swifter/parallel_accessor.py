@@ -1,6 +1,6 @@
 import numpy as np
 import warnings
-from .base import _SwifterBaseObject, ERRORS_TO_HANDLE, suppress_stdout_stderr
+from .base import _SwifterBaseObject, ERRORS_TO_HANDLE, suppress_stdout_stderr_logging
 
 
 class _SwifterParallelBaseObject(_SwifterBaseObject):
@@ -74,7 +74,7 @@ class ParallelSeriesAccessor(_SwifterParallelBaseObject):
             warnings.warn("Axis keyword not necessary because applying on a Series.")
 
         try:  # try to vectorize
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 self._validate_apply(
@@ -98,7 +98,7 @@ class ParallelDataFrameAccessor(_SwifterParallelBaseObject):
         sample = self._obj.iloc[:20, :]
 
         try:  # try to vectorize
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 self._validate_apply(

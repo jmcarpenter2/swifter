@@ -13,7 +13,7 @@ from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
 from .base import (
     _SwifterBaseObject,
-    suppress_stdout_stderr,
+    suppress_stdout_stderr_logging,
     ERRORS_TO_HANDLE,
     SAMPLE_SIZE,
     N_REPEATS,
@@ -141,18 +141,18 @@ class _SwifterObject(_SwifterBaseObject):
 class SeriesAccessor(_SwifterObject):
     def _wrapped_apply(self, func, convert_dtype=True, args=(), **kwds):
         def wrapped():
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 self._obj.iloc[: self._SAMPLE_SIZE].apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
         return wrapped
 
     def _dask_apply(self, func, convert_dtype, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2]
-        with suppress_stdout_stderr():
+        with suppress_stdout_stderr_logging():
             meta = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
         try:
             # check that the dask map partitions matches the pandas apply
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = (
                     dd.from_pandas(sample, npartitions=self._npartitions)
                     .map_partitions(func, *args, meta=meta, **kwds)
@@ -208,7 +208,7 @@ class SeriesAccessor(_SwifterObject):
             warnings.warn("Axis keyword not necessary because applying on a Series.")
 
         try:  # try to vectorize
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 self._validate_apply(
@@ -237,7 +237,7 @@ class SeriesAccessor(_SwifterObject):
 class DataFrameAccessor(_SwifterObject):
     def _wrapped_apply(self, func, axis=0, raw=None, result_type=None, args=(), **kwds):
         def wrapped():
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 self._obj.iloc[: self._SAMPLE_SIZE, :].apply(
                     func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
                 )
@@ -248,7 +248,7 @@ class DataFrameAccessor(_SwifterObject):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         try:
             series = False
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 import modin.pandas as md
 
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
@@ -280,10 +280,10 @@ class DataFrameAccessor(_SwifterObject):
 
     def _dask_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2, :]
-        with suppress_stdout_stderr():
+        with suppress_stdout_stderr_logging():
             meta = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
         try:
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 # check that the dask apply matches the pandas apply
                 tmp_df = (
                     dd.from_pandas(sample, npartitions=self._npartitions)
@@ -329,7 +329,7 @@ class DataFrameAccessor(_SwifterObject):
         allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
 
         try:  # try to vectorize
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 self._validate_apply(
@@ -360,17 +360,17 @@ class DataFrameAccessor(_SwifterObject):
 
     def _wrapped_applymap(self, func):
         def wrapped():
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 self._obj.iloc[: self._SAMPLE_SIZE, :].applymap(func)
 
         return wrapped
 
     def _dask_applymap(self, func):
         sample = self._obj.iloc[: self._npartitions * 2, :]
-        with suppress_stdout_stderr():
+        with suppress_stdout_stderr_logging():
             meta = sample.applymap(func)
         try:
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 # check that the dask apply matches the pandas apply
                 tmp_df = (
                     dd.from_pandas(sample, npartitions=self._npartitions)
@@ -417,7 +417,7 @@ class DataFrameAccessor(_SwifterObject):
         allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in sample.dtypes.values)
 
         try:  # try to vectorize
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = func(sample)
                 sample_df = sample.applymap(func)
                 self._validate_apply(
@@ -465,7 +465,7 @@ class Transformation(_SwifterObject):
 
     def _wrapped_apply(self, func, *args, **kwds):
         def wrapped():
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 self._sample_pd.apply(func, *args, **kwds)
 
         return wrapped
@@ -529,7 +529,7 @@ class Rolling(Transformation):
     def _dask_apply(self, func, *args, **kwds):
         try:
             # check that the dask rolling apply matches the pandas apply
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = (
                     dd.from_pandas(self._comparison_pd, npartitions=self._npartitions)
                     .rolling(**{k: v for k, v in self._rolling_kwds.items() if k not in ["on", "closed"]})
@@ -589,7 +589,7 @@ class Resampler(Transformation):
     def _dask_apply(self, func, *args, **kwds):
         try:
             # check that the dask resampler apply matches the pandas apply
-            with suppress_stdout_stderr():
+            with suppress_stdout_stderr_logging():
                 tmp_df = (
                     dd.from_pandas(self._comparison_pd, npartitions=self._npartitions)
                     .resample(**{k: v for k, v in self._resampler_kwds.items() if k in ["rule", "closed", "label"]})

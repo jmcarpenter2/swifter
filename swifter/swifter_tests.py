@@ -254,6 +254,21 @@ class TestSetup(TestSwifter):
         )
         self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
+    def test_logging_redirected(self):
+        LOG.info("test_stdout_redirected")
+        print_messages = subprocess.check_output(
+            [
+                sys.executable,
+                "-c",
+                "import pandas as pd; import numpy as np; import logging; import swifter; "
+                # + "logging.basicConfig(level = 'DEBUG', format = '[%(asctime)s] [%(levelname)s]: %(message)s', datefmt = '%Y-%m-%d %H:%M:%S %z') "
+                + "df = pd.DataFrame({'x': np.random.normal(size=1000)}, dtype='float32'); "
+                + "df.swifter.progress_bar(enable=False).apply(lambda row: logging.info('%s', row['x']), axis=1);",
+            ],
+            stderr=subprocess.STDOUT,
+        )
+        self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
+
 
 class TestPandasSeries(TestSwifter):
     def test_apply_on_empty_series(self):
