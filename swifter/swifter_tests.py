@@ -142,11 +142,11 @@ class TestSetup(TestSwifter):
                     {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
                 ).swifter.resample("3T"),
             ],
-            [0.5, 0.99, 52428800],
+            [0.5, 0.99, 100000000],
             [
                 ceil(virtual_memory().available * 0.5),
                 ceil(virtual_memory().available * 0.99),
-                52428800,
+                100000000,
             ],
         ):
             before = swifter_df._ray_memory
