@@ -142,11 +142,11 @@ class TestSetup(TestSwifter):
                     {"x": np.arange(0, 10)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=10)
                 ).swifter.resample("3T"),
             ],
-            [0.5, 0.99, 52428800],
+            [0.5, 0.99, 100000000],
             [
                 ceil(virtual_memory().available * 0.5),
                 ceil(virtual_memory().available * 0.99),
-                52428800,
+                100000000,
             ],
         ):
             before = swifter_df._ray_memory
@@ -249,6 +249,21 @@ class TestSetup(TestSwifter):
                 "import pandas as pd; import numpy as np; import swifter; "
                 + "df = pd.DataFrame({'x': np.random.normal(size=4)}, dtype='float32'); "
                 + "df.swifter.progress_bar(enable=False).apply(lambda x: print(x.values))",
+            ],
+            stderr=subprocess.STDOUT,
+        )
+        self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
+
+    def test_logging_redirected(self):
+        LOG.info("test_stdout_redirected")
+        print_messages = subprocess.check_output(
+            [
+                sys.executable,
+                "-c",
+                "import pandas as pd; import numpy as np; import logging; import swifter; "
+                # + "logging.basicConfig(level = 'DEBUG', format = '[%(asctime)s] [%(levelname)s]: %(message)s', datefmt = '%Y-%m-%d %H:%M:%S %z') "
+                + "df = pd.DataFrame({'x': np.random.normal(size=1000)}, dtype='float32'); "
+                + "df.swifter.progress_bar(enable=False).apply(lambda row: logging.info('%s', row['x']), axis=1);",
             ],
             stderr=subprocess.STDOUT,
         )

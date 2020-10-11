@@ -1,4 +1,5 @@
 import sys
+import logging
 from os import devnull
 from math import ceil
 from psutil import cpu_count, virtual_memory
@@ -18,14 +19,20 @@ N_REPEATS = 3
 
 
 @contextmanager
-def suppress_stdout_stderr():
+def suppress_stdout_stderr_logging():
     """
     A context manager that redirects stdout and stderr to devnull
     Used for avoiding repeated prints of the data during sample/test applies of Swifter
     """
-    with open(devnull, "w") as fnull:
-        with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
-            yield (err, out)
+    previous_level = logging.root.manager.disable
+
+    logging.disable(logging.CRITICAL)
+    try:
+        with open(devnull, "w") as fnull:
+            with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
+                yield (err, out)
+    finally:
+        logging.disable(previous_level)
 
 
 class _SwifterBaseObject:
@@ -82,5 +89,8 @@ class _SwifterBaseObject:
                 f"Only {virtual_memory().available} bytes are currently available."
             )
         ray.shutdown()
-        ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
+        try:
+            ray.init(num_cpus=num_cpus, _memory=self._ray_memory, **kwds)
+        except TypeError:
+            ray.init(num_cpus=num_cpus, memory=self._ray_memory, **kwds)
         return self
