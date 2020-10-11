@@ -114,7 +114,9 @@ def pandas.DataFrame.swifter.resample(
         loffset=None,
         base=0,
         on=None,
-        level=None
+        level=None,
+        origin=None,
+        offset=None,
     ).apply(func, *args, **kwds)
 ```
 

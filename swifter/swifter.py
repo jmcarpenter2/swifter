@@ -109,6 +109,8 @@ class _SwifterObject(_SwifterBaseObject):
         base=0,
         on=None,
         level=None,
+        origin=None,
+        offset=None,
     ):
         """
         Create a swifter resampler object
@@ -124,7 +126,12 @@ class _SwifterObject(_SwifterBaseObject):
             "base": base,
             "on": on,
             "level": level,
+            "origin": origin,
+            "offset": offset,
         }
+        if not base:
+            kwds.pop("base")
+
         return Resampler(
             self._obj,
             npartitions=self._npartitions,
