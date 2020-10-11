@@ -1,7 +1,8 @@
 # Changelog
 
-## Version 1.0.6 -- 2020-10-11
+## Version 1.0.7 -- 2020-10-11
 * Sample applies now suppress logging in addition to stdout and stderr
+* Allow new kwargs `offset` and `origin` for pandas df.resample
 
 ## Version 1.0.6 -- 2020-09-19
 * Fix warnings introduced in 1.0.5 to appropriate warn when using an apply function
