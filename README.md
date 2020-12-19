@@ -8,7 +8,16 @@ A package which efficiently applies any function to a pandas dataframe or series
 ![GitHub stars](https://img.shields.io/github/stars/jmcarpenter2/swifter.svg?style=popout)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/swifter.svg)
 
-To know about latest improvements, please check [changelog](docs/changelog.md).
+## Blog posts
+* [Release 1.0.0](https://medium.com/@jmcarpenter2/swifter-1-0-0-automatically-efficient-pandas-and-modin-dataframe-applies-cfbd9555e7c8)
+* [First release](https://medium.com/@jmcarpenter2/swiftapply-automatically-efficient-pandas-apply-operations-50e1058909f9)
+
+## Documentation
+To know about latest improvements, please check the [changelog](docs/changelog.md).
+
+Further documentations on swifter is available [here](docs/documentation.md).
+
+Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along with the [speed benchmark notebook](examples/swifter_speed_comparison.ipynb). The benchmarks are created using the library [perfplot](https://github.com/unutbu/perfplot).
 
 ## Installation:
 ```
@@ -54,10 +63,6 @@ df['outCol'] = df[['inCol1', 'inCol2']].swifter.apply(my_func)
 df['outCol'] = df[['inCol1', 'inCol2', 'inCol3']].swifter.apply(my_func,
              positional_arg, keyword_arg=keyword_argval)
 ```
-
-Further documentations on swifter is available [here](docs/documentation.md).
-
-Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along with the [speed benchmark notebook](examples/swifter_speed_comparison.ipynb). The benchmarks are created using the library [perfplot](https://github.com/unutbu/perfplot).
 
 ## Vectorizes your function, when possible
 ![Alt text](/assets/vectorizes_when_possible_real.png?raw=true)
