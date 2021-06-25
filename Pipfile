@@ -8,7 +8,7 @@ black = "==19.3b0"
 flake8 = "==3.7.7"
 nose = "*"
 perfplot = "==0.7.3"
-swifter = ">=1.0.0"
+swifter = {editable = true, path="."}
 
 [packages]
 pandas = ">=1.0.0"

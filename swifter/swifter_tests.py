@@ -254,21 +254,6 @@ class TestSetup(TestSwifter):
         )
         self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
-    def test_logging_redirected(self):
-        LOG.info("test_stdout_redirected")
-        print_messages = subprocess.check_output(
-            [
-                sys.executable,
-                "-c",
-                "import pandas as pd; import numpy as np; import logging; import swifter; "
-                # + "logging.basicConfig(level = 'DEBUG', format = '[%(asctime)s] [%(levelname)s]: %(message)s', datefmt = '%Y-%m-%d %H:%M:%S %z') "
-                + "df = pd.DataFrame({'x': np.random.normal(size=1000)}, dtype='float32'); "
-                + "df.swifter.progress_bar(enable=False).apply(lambda row: logging.info('%s', row['x']), axis=1);",
-            ],
-            stderr=subprocess.STDOUT,
-        )
-        self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
-
 
 class TestPandasSeries(TestSwifter):
     def test_apply_on_empty_series(self):
@@ -611,25 +596,14 @@ class TestPandasTransformation(TestSwifter):
         df = pd.DataFrame(
             {"x": np.arange(0, 1_000_000)}, index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000)
         )
-
-        start_pd = time.time()
         pd_val = df.rolling("1d").apply(max, raw=True)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
-
-        start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4)
             .rolling("1d")
             .progress_bar(desc="Vec math apply ~ Rolling DF")
             .apply(max, raw=True)
         )
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
-
         self.assertEqual(pd_val, swifter_val)  # equality test
-        if self.ncores > 1:  # speed test
-            self.assertLess(swifter_time, pd_time)
 
     def test_nonvectorized_math_apply_on_large_rolling_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_large_rolling_dataframe")

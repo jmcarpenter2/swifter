@@ -351,7 +351,11 @@ class DataFrameAccessor(_SwifterObject):
             est_apply_duration = sample_proc_est / self._SAMPLE_SIZE * self._obj.shape[0]
 
             # if pandas sample apply takes too long and not performing str processing, use dask
-            if (est_apply_duration > self._dask_threshold) and allow_dask_processing and axis == 1:
+            if (
+                (est_apply_duration > self._dask_threshold)
+                and (allow_dask_processing or ("modin.pandas" not in sys.modules))
+                and axis == 1
+            ):
                 return self._dask_apply(func, axis, raw, result_type, *args, **kwds)
             # if not dask, use modin for string processing
             elif (est_apply_duration > self._dask_threshold) and axis == 1:
