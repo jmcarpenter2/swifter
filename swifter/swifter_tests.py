@@ -1,4 +1,5 @@
 import sys
+import importlib
 import unittest
 import subprocess
 import time
@@ -59,6 +60,14 @@ def clean_text_foo(row):
     text = text.strip()
     text = text.replace(" ", "_")
     return text
+
+
+def run_if_modin_installed(cls):
+    # if modin is installed, run the test/test suite
+    if importlib.util.find_spec("modin") is not None:
+        return cls
+    else:  # if modin isnt installed just skip the test(s)
+        return True
 
 
 class TestSwifter(unittest.TestCase):
@@ -450,8 +459,10 @@ class TestPandasDataFrame(TestSwifter):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
+    @run_if_modin_installed
     def test_nonvectorized_text_modin_apply_on_large_dataframe(self):
         LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe")
+        self.modinSetUp()
         df = pd.DataFrame({"letter": ["I", "You", "We"] * 1_000_000, "value": ["want to break free"] * 3_000_000})
 
         tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
@@ -475,8 +486,10 @@ class TestPandasDataFrame(TestSwifter):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
+    @run_if_modin_installed
     def test_nonvectorized_text_modin_apply_on_large_dataframe_returns_series(self):
         LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe_returns_series")
+        self.modinSetUp()
         df = pd.DataFrame({"str_date": ["2000/01/01 00:00:00"] * 1_000_000})
 
         tqdm.pandas(desc="Pandas Nonvec text apply ~ DF -> Srs")
@@ -668,6 +681,7 @@ class TestPandasTransformation(TestSwifter):
             self.assertLess(swifter_time, pd_time)
 
 
+@run_if_modin_installed
 class TestModinSeries(TestSwifter):
     def test_modin_series_warns_on_missing_attributes(self):
         LOG.info("test_modin_series_warns_on_missing_attributes")
@@ -742,6 +756,7 @@ class TestModinSeries(TestSwifter):
         self.assertLess(swifter_time, md_time)  # speed test
 
 
+@run_if_modin_installed
 class TestModinDataFrame(TestSwifter):
     def test_modin_dataframe_warns_on_missing_attributes(self):
         LOG.info("test_modin_dataframe_warns_on_missing_attributes")
