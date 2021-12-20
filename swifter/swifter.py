@@ -18,6 +18,7 @@ from .base import (
     SAMPLE_SIZE,
     N_REPEATS,
 )
+from .config import config
 
 
 class _SwifterObject(_SwifterBaseObject):
@@ -25,23 +26,44 @@ class _SwifterObject(_SwifterBaseObject):
         self,
         pandas_obj,
         npartitions=None,
-        dask_threshold=1,
-        scheduler="processes",
-        progress_bar=True,
+        dask_threshold=None,
+        scheduler=None,
+        progress_bar=None,
         progress_bar_desc=None,
-        allow_dask_on_strings=False,
+        allow_dask_on_strings=None,
     ):
         super().__init__(base_obj=pandas_obj, npartitions=npartitions)
         if self._obj.index.duplicated().any():
             warnings.warn(
                 "This pandas object has duplicate indices, and swifter may not be able to improve performance. Consider resetting the indices with `df.reset_index(drop=True)`."
             )
-        self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
-        self._dask_threshold = dask_threshold
-        self._scheduler = scheduler
-        self._progress_bar = progress_bar
-        self._progress_bar_desc = progress_bar_desc
-        self._allow_dask_on_strings = allow_dask_on_strings
+        self._SAMPLE_SIZE = (
+            SAMPLE_SIZE
+            if self._nrows > (25 * SAMPLE_SIZE)
+            else int(ceil(self._nrows / 25))
+        )
+
+        merged_config = {
+            **config,
+            **{
+                kwarg: val
+                for kwarg, val in {
+                    "npartitions": npartitions,
+                    "dask_threshold": dask_threshold,
+                    "scheduler": scheduler,
+                    "progress_bar": progress_bar,
+                    "progress_bar_desc": progress_bar_desc,
+                    "allow_dask_on_strings": allow_dask_on_strings,
+                }.items()
+                if val is not None
+            },
+        }
+
+        self._dask_threshold = merged_config["dask_threshold"]
+        self._scheduler = merged_config["scheduler"]
+        self._progress_bar = merged_config["progress_bar"]
+        self._progress_bar_desc = merged_config["progress_bar_desc"]
+        self._allow_dask_on_strings = merged_config["allow_dask_on_strings"]
 
     def set_dask_threshold(self, dask_threshold=1):
         """
