@@ -1,0 +1,31 @@
+version: "3"
+services:
+  bash:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    environment:
+      GRANT_SUDO: "yes"
+    user: root
+    volumes:
+      - ../:/mnt
+    entrypoint: "/bin/bash"
+    stdin_open: true
+    container_name: "swifter_bash_${USER}"
+    tty: true
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    environment:
+      GRANT_SUDO: "yes"
+    user: root
+    ports:
+      - "127.0.0.1::8888"
+    volumes:
+      - ../:/mnt
+    entrypoint: bash -c "cd /mnt && jupyter notebook --NotebookApp.token='' --ip=0.0.0.0 --allow-root && /bin/bash"
+    stdin_open: true
+    container_name: "swifter_jupyter_${USER}"
+    tty: true

@@ -69,9 +69,10 @@ class _SwifterBaseObject:
         Args:
             num_cpus: the number of cpus used by ray multiprocessing
             memory: the amount of memory allocated to ray workers
-                If a proportion of 1 is provided (0 < memory <= 1],
+                If a proportion of 1 is provided e.g. (0 < memory <= 1],
                     then that proportion of available memory is used
-                If a value greater than 1 is provided (1 < memory <= virtual_memory().available]
+                If a value greater than 1 is provided
+                e.g. (1 < memory <= virtual_memory().available]
                     then that many bytes of memory are used
             kwds: key-word arguments to pass to `ray.init()`
         """
