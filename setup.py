@@ -14,6 +14,5 @@ setup(
     download_url="https://github.com/jmcarpenter2/swifter/archive/1.0.9.tar.gz",
     keywords=["pandas", "dask", "apply", "function", "parallelize", "vectorize"],
     install_requires=requirements,
-    extras_require={"modin-ray": ["modin[ray]>=0.8.1.1"], "modin-dask": ["modin[dask]>=0.8.1.1"]},
     classifiers=[],
 )

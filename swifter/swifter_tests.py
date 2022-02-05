@@ -5,14 +5,13 @@ import subprocess
 import time
 import logging
 import warnings
-from psutil import cpu_count, virtual_memory
+from psutil import cpu_count
 
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
 import swifter
 
-from math import ceil, isclose
 from tqdm.auto import tqdm
 
 
@@ -141,54 +140,6 @@ class TestSetup(TestSwifter):
             if set_npartitions is not None:
                 self.assertNotEqual(before, actual)
 
-    def test_set_ray_compute(self):
-        LOG.info("test_set_ray_compute")
-        for swifter_df, set_ray_memory, expected in zip(
-            [
-                pd.DataFrame().swifter,
-                pd.Series().swifter,
-                pd.DataFrame(
-                    {"x": np.arange(0, 10)},
-                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
-                ).swifter.rolling("1d"),
-                pd.DataFrame(
-                    {"x": np.arange(0, 10)},
-                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
-                ).swifter.resample("3T"),
-            ],
-            [0.5, 0.99, 100000000],
-            [
-                ceil(virtual_memory().available * 0.5),
-                ceil(virtual_memory().available * 0.99),
-                100000000,
-            ],
-        ):
-            before = swifter_df._ray_memory
-            swifter_df.set_ray_compute(num_cpus=1, memory=set_ray_memory)
-            actual = swifter_df._ray_memory
-            self.assertTrue(isclose(actual, expected, rel_tol=0.2))
-            self.assertNotEqual(before, actual)
-
-    def test_cant_set_ray_memory_OOM(self):
-        LOG.info("test_cant_set_ray_memory_OOM")
-        for swifter_df, set_ray_memory in zip(
-            [
-                pd.DataFrame().swifter,
-                pd.Series().swifter,
-                pd.DataFrame(
-                    {"x": np.arange(0, 10)},
-                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
-                ).swifter.rolling("1d"),
-                pd.DataFrame(
-                    {"x": np.arange(0, 10)},
-                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
-                ).swifter.resample("3T"),
-            ],
-            [1e100, 1e100, 1e100, 1e100],
-        ):
-            with self.assertRaises(MemoryError):
-                swifter_df.set_ray_compute(memory=set_ray_memory)
-
     def test_set_dask_threshold(self):
         LOG.info("test_set_dask_threshold")
         expected = 1000
@@ -270,7 +221,8 @@ class TestSetup(TestSwifter):
                 "-c",
                 "import pandas as pd; import numpy as np; import swifter; "
                 + "df = pd.DataFrame({'x': np.random.normal(size=4)}, dtype='float32'); "
-                + "df.swifter.progress_bar(enable=False).apply(lambda x: print(x.values))",
+                + "df.swifter.progress_bar(enable=False)"
+                + ".apply(lambda x: print(x.values))",
             ],
             stderr=subprocess.STDOUT,
         )
@@ -492,67 +444,6 @@ class TestPandasDataFrame(TestSwifter):
             .set_npartitions(4)
             .progress_bar(desc="Nonvec Dask text apply ~ DF")
             .apply(text_foo, axis=1)
-        )
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
-
-        self.assertEqual(pd_val, swifter_val)  # equality test
-        if self.ncores > 1:  # speed test
-            self.assertLess(swifter_time, pd_time)
-
-    @run_if_modin_installed
-    def test_nonvectorized_text_modin_apply_on_large_dataframe(self):
-        LOG.info("test_nonvectorized_text_modin_apply_on_large_dataframe")
-        self.modinSetUp()
-        df = pd.DataFrame(
-            {
-                "letter": ["I", "You", "We"] * 1_000_000,
-                "value": ["want to break free"] * 3_000_000,
-            }
-        )
-
-        tqdm.pandas(desc="Pandas Nonvec text apply ~ DF")
-        start_pd = time.time()
-        pd_val = df.progress_apply(clean_text_foo, axis=1)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
-
-        start_swifter = time.time()
-        swifter_val = (
-            df.swifter.allow_dask_on_strings(False)
-            .set_npartitions(4)
-            .set_ray_compute(num_cpus=2 if self.ncores >= 2 else 1, memory=0.25)
-            .progress_bar(desc="Nonvec Modin text apply ~ DF")
-            .apply(clean_text_foo, axis=1)
-        )
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
-
-        self.assertEqual(pd_val, swifter_val)  # equality test
-        if self.ncores > 1:  # speed test
-            self.assertLess(swifter_time, pd_time)
-
-    @run_if_modin_installed
-    def test_nonvectorized_text_modin_apply_on_large_dataframe_returns_series(self):
-        LOG.info(
-            "test_nonvectorized_text_modin_apply_on_large_dataframe_returns_series"
-        )
-        self.modinSetUp()
-        df = pd.DataFrame({"str_date": ["2000/01/01 00:00:00"] * 1_000_000})
-
-        tqdm.pandas(desc="Pandas Nonvec text apply ~ DF -> Srs")
-        start_pd = time.time()
-        pd_val = df.progress_apply(lambda row: row["str_date"].split()[0], axis=1)
-        end_pd = time.time()
-        pd_time = end_pd - start_pd
-
-        start_swifter = time.time()
-        swifter_val = (
-            df.swifter.allow_dask_on_strings(False)
-            .set_npartitions(4)
-            .set_ray_compute(num_cpus=2 if self.ncores >= 2 else 1, memory=0.25)
-            .progress_bar(desc="Nonvec Modin text apply ~ DF -> Srs")
-            .apply(lambda row: row["str_date"].split()[0], axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter

@@ -1,4 +1,3 @@
-import sys
 import timeit
 import warnings
 import numpy as np
@@ -299,54 +298,6 @@ class DataFrameAccessor(_SwifterObject):
 
         return wrapped
 
-    def _modin_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
-        sample = self._obj.iloc[: self._npartitions * 2, :]
-        try:
-            series = False
-            with suppress_stdout_stderr_logging():
-                import modin.pandas as md
-
-                sample_df = sample.apply(
-                    func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
-                )
-                # check that the modin apply matches the pandas APPLY
-                tmp_df = (
-                    md.DataFrame(sample)
-                    .apply(
-                        func,
-                        axis=axis,
-                        raw=raw,
-                        result_type=result_type,
-                        args=args,
-                        **kwds,
-                    )
-                    ._to_pandas()
-                )
-                if isinstance(sample_df, pd.Series) and isinstance(
-                    tmp_df, pd.DataFrame
-                ):
-                    tmp_df = pd.Series(tmp_df.values[:, 0])
-                    series = True
-                self._validate_apply(
-                    tmp_df.equals(sample_df),
-                    error_message="Modin apply sample does not match pandas apply sample.",
-                )
-            output_df = (
-                md.DataFrame(self._obj)
-                .apply(func, *args, axis=axis, raw=raw, result_type=result_type, **kwds)
-                ._to_pandas()
-            )
-            return pd.Series(output_df.values[:, 0]) if series else output_df
-        except ERRORS_TO_HANDLE:
-            if self._progress_bar:
-                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                apply_func = self._obj.progress_apply
-            else:
-                apply_func = self._obj.apply
-            return apply_func(
-                func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
-            )
-
     def _dask_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
         sample = self._obj.iloc[: self._npartitions * 2, :]
         with suppress_stdout_stderr_logging():
@@ -461,13 +412,10 @@ class DataFrameAccessor(_SwifterObject):
             # and not performing str processing, use dask
             if (
                 (est_apply_duration > self._dask_threshold)
-                and (allow_dask_processing or ("modin.pandas" not in sys.modules))
+                and allow_dask_processing
                 and axis == 1
             ):
                 return self._dask_apply(func, axis, raw, result_type, *args, **kwds)
-            # if not dask, use modin for string processing
-            elif (est_apply_duration > self._dask_threshold) and axis == 1:
-                return self._modin_apply(func, axis, raw, result_type, *args, **kwds)
             else:  # use pandas
                 if self._progress_bar:
                     tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
@@ -742,8 +690,8 @@ class Resampler(Transformation):
         self._sample_pd = self._sample_pd.resample(**kwds)
         self._obj_pd = self._obj_pd.resample(**kwds)
         # Setting dask dataframe `self._obj_dd` to None when there are 0 `self._nrows`
-        # because swifter will immediately return the pandas form during the apply function
-        # if there are 0 `self._nrows`
+        # because swifter will immediately return the pandas form during the apply
+        # function if there are 0 `self._nrows`
         self._obj_dd = (
             self._obj_dd.resample(
                 **{k: v for k, v in kwds.items() if k in ["rule", "closed", "label"]}
