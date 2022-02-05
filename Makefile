@@ -9,7 +9,7 @@ help: ## Display help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 build: ## Build docker image with tag "latest" for unit testing
-	DOCKER_BUILDKIT=1 docker build --build-arg GRANT_SUDO="yes" -t $(IMAGE) . -f docker/Dockerfile-dev
+	cd docker && DOCKER_BUILDKIT=1 docker build --build-arg GRANT_SUDO="yes" -t $(IMAGE) . -f Dockerfile-dev && cd ..
 
 release-tag: ## TOODO
 	echo ${TAG}

@@ -571,7 +571,7 @@ class Transformation(_SwifterObject):
         """
         # if the transformed dataframe is empty, return early using Pandas
         if not self._nrows:
-            return self._obj_pd.apply(func, args=args, **kwds)
+            return self._obj_pd.apply(func, *args, **kwds)
 
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
