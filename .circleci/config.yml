@@ -7,7 +7,7 @@ jobs:
     resource_class: xlarge
     working_directory: ~/repo
     docker:
-      - image: python:3.7
+      - image: python:3.10
         auth:
           username: $DOCKERHUB_USERNAME
           password: $DOCKERHUB_PASSWORD
@@ -15,18 +15,22 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install requirements
+          command: |
+            pip install -r docker/requirements-dev.txt
+      - run:
           name: Black lint check
           command: |
-            pip install black && cd swifter && black -l 120 --check .
+            cd swifter && black --check .
       - run:
           name: Unit tests
           command: |
-            pip install pipenv && pipenv install && pipenv install coverage && pipenv run coverage run -m unittest swifter/swifter_tests.py
+            coverage run -m unittest swifter/swifter_tests.py
       - run:
           name: Codecov report
           command: |
             coverage report -i && coverage html -i
-            pip install codecov && codecov --required || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required)
+            codecov --required || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required) || (sleep 5 && codecov --required)
       - store_artifacts:
           path: htmlcov
 

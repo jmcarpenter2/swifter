@@ -203,7 +203,7 @@ df.swifter.set_dask_scheduler(scheduler="threads").apply(lambda x: x+1)
 
 ## 11. `pandas.DataFrame.swifter.allow_dask_on_strings(enable=True).apply`
 
-Default (enable=False) is to use Modin, which is faster than Dask for axis=1 string applies. This legacy flag allows the user to specify whether to allow dask to handle dataframes containing string types. Dask can be particularly slow if you are actually manipulating strings, but if you just have a string column in your data frame this will allow dask to handle the execution.
+This flag allows the user to specify whether to allow dask to handle dataframes containing string types. Dask can be particularly slow if you are actually manipulating strings, but if you just have a string column in your data frame this will allow dask to handle the execution.
 ```python
 def pandas.DataFrame.swifter.allow_dask_on_strings(enable=True)
 ```

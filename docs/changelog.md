@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.1.0 -- 2022-02-04
+* Resolve installation issues by removing modin dependency, and modin apply route for axis=1 string applies
+* apply_dask_on_strings returns to original functionality,
+ which allows control over whether to use dask or pandas by default for string applies
+
 ## Version 1.0.7 -- 2020-10-11
 * Sample applies now suppress logging in addition to stdout and stderr
 * Allow new kwargs `offset` and `origin` for pandas df.resample
