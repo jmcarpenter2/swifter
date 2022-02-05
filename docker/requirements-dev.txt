@@ -11,4 +11,6 @@ black==22.1.0
 flake8==3.7.7
 perfplot==0.7.3
 pytest==6.2.2
+coverage
+codecov
 nose
