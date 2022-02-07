@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 1.1.2 -- 2022-02-07
+* Resolve installation issue by removing import from setup.py
+
 ## Version 1.1.1 -- 2022-02-04
 * Resolve installation issues by removing modin dependency, and modin apply route for axis=1 string applies
 * apply_dask_on_strings returns to original functionality,
