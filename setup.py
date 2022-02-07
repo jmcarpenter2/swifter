@@ -1,10 +1,9 @@
 from setuptools import setup
-from swifter import __version__ as VERSION
 
 setup(
     name="swifter",
     packages=["swifter"],  # this must be the same as the name above
-    version=VERSION,
+    version="1.1.2",
     description="A package which efficiently applies any function to a pandas dataframe or series in the fastest available manner",
     author="Jason Carpenter",
     author_email="jcarpenter@manifold.ai",
