@@ -19,9 +19,7 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
-formatter = logging.Formatter(
-    "%(asctime)-8s.%(msecs)03d %(levelname)-8s %(name)s:%(lineno)-3s %(message)s"
-)
+formatter = logging.Formatter("%(asctime)-8s.%(msecs)03d %(levelname)-8s %(name)s:%(lineno)-3s %(message)s")
 ch.setFormatter(formatter)
 LOG.addHandler(ch)
 
@@ -226,9 +224,7 @@ class TestSetup(TestSwifter):
             ],
             stderr=subprocess.STDOUT,
         )
-        self.assertEqual(
-            len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1
-        )
+        self.assertEqual(len(print_messages.decode("utf-8").rstrip("\n").split("\n")), 1)
 
 
 class TestPandasSeries(TestSwifter):
@@ -245,9 +241,7 @@ class TestPandasSeries(TestSwifter):
         series = df["x"]
         tqdm.pandas(desc="Pandas Vec math apply ~ Series")
         pd_val = series.progress_apply(math_foo, compare_to=1)
-        swifter_val = series.swifter.progress_bar(desc="Vec math apply ~ Series").apply(
-            math_foo, compare_to=1
-        )
+        swifter_val = series.swifter.progress_bar(desc="Vec math apply ~ Series").apply(math_foo, compare_to=1)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_small_series_no_progress_bar(self):
@@ -255,14 +249,12 @@ class TestPandasSeries(TestSwifter):
         df = pd.DataFrame({"x": np.random.normal(size=1000)})
         series = df["x"]
         pd_val = series.apply(math_foo, compare_to=1)
-        swifter_val = series.swifter.progress_bar(enable=False).apply(
-            math_foo, compare_to=1
-        )
+        swifter_val = series.swifter.progress_bar(enable=False).apply(math_foo, compare_to=1)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_vectorized_math_apply_on_large_series(self):
         LOG.info("test_vectorized_math_apply_on_large_series")
-        df = pd.DataFrame({"x": np.random.normal(size=1_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=2_000_000)})
         series = df["x"]
 
         tqdm.pandas(desc="Pandas Vec math apply ~ Series")
@@ -326,21 +318,15 @@ class TestPandasDataFrame(TestSwifter):
 
     def test_nonvectorized_math_apply_on_small_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_small_dataframe")
-        df = pd.DataFrame(
-            {"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)}
-        )
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
         tqdm.pandas(desc="Pandas Nonvec math apply ~ DF")
         pd_val = df.progress_apply(math_agg_foo)
-        swifter_val = df.swifter.progress_bar(desc="Vec math apply ~ DF").apply(
-            math_agg_foo
-        )
+        swifter_val = df.swifter.progress_bar(desc="Vec math apply ~ DF").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_small_dataframe_no_progress_bar(self):
         LOG.info("test_nonvectorized_math_apply_on_small_dataframe_no_progress_bar")
-        df = pd.DataFrame(
-            {"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)}
-        )
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
         pd_val = df.apply(math_agg_foo)
         swifter_val = df.swifter.progress_bar(enable=False).apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
@@ -362,9 +348,7 @@ class TestPandasDataFrame(TestSwifter):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.set_npartitions(4)
-            .progress_bar(desc="Vec math apply ~ DF")
-            .apply(math_vec_multiply, axis=1)
+            df.swifter.set_npartitions(4).progress_bar(desc="Vec math apply ~ DF").apply(math_vec_multiply, axis=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -375,9 +359,7 @@ class TestPandasDataFrame(TestSwifter):
 
     def test_nonvectorized_math_apply_on_large_dataframe_broadcast(self):
         LOG.info("test_nonvectorized_math_apply_on_large_dataframe_broadcast")
-        df = pd.DataFrame(
-            {"x": np.random.normal(size=500_000), "y": np.random.uniform(size=500_000)}
-        )
+        df = pd.DataFrame({"x": np.random.normal(size=500_000), "y": np.random.uniform(size=500_000)})
 
         tqdm.pandas(desc="Pandas Nonvec math apply + broadcast ~ DF")
         start_pd = time.time()
@@ -400,9 +382,7 @@ class TestPandasDataFrame(TestSwifter):
 
     def test_nonvectorized_math_apply_on_large_dataframe_reduce(self):
         LOG.info("test_nonvectorized_math_apply_on_large_dataframe_reduce")
-        df = pd.DataFrame(
-            {"x": np.random.normal(size=250_000), "y": np.random.uniform(size=250_000)}
-        )
+        df = pd.DataFrame({"x": np.random.normal(size=250_000), "y": np.random.uniform(size=250_000)})
 
         tqdm.pandas(desc="Pandas Nonvec math apply + reduce ~ DF")
         start_pd = time.time()
@@ -456,8 +436,8 @@ class TestPandasDataFrame(TestSwifter):
         LOG.info("test_vectorized_math_applymap_on_large_dataframe")
         df = pd.DataFrame(
             {
-                "x": np.random.normal(size=1_000_000),
-                "y": np.random.uniform(size=1_000_000),
+                "x": np.random.normal(size=2_000_000),
+                "y": np.random.uniform(size=2_000_000),
             }
         )
 
@@ -469,9 +449,7 @@ class TestPandasDataFrame(TestSwifter):
 
         start_swifter = time.time()
         swifter_val = (
-            df.swifter.set_npartitions(4)
-            .progress_bar(desc="Vec math applymap ~ DF")
-            .applymap(math_vec_square)
+            df.swifter.set_npartitions(4).progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_square)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -496,11 +474,7 @@ class TestPandasDataFrame(TestSwifter):
         pd_time = end_pd - start_pd
 
         start_swifter = time.time()
-        swifter_val = (
-            df.swifter.set_npartitions(4)
-            .progress_bar(desc="Nonvec math applymap ~ DF")
-            .applymap(math_foo)
-        )
+        swifter_val = df.swifter.set_npartitions(4).progress_bar(desc="Nonvec math applymap ~ DF").applymap(math_foo)
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
 
@@ -510,18 +484,14 @@ class TestPandasDataFrame(TestSwifter):
 
     def test_nonvectorized_math_applymap_on_small_dataframe(self):
         LOG.info("test_nonvectorized_math_applymap_on_small_dataframe")
-        df = pd.DataFrame(
-            {"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)}
-        )
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
         pd_val = df.applymap(math_foo)
         swifter_val = df.swifter.set_npartitions(4).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar(self):
         LOG.info("test_nonvectorized_math_applymap_on_small_dataframe_no_progress_bar")
-        df = pd.DataFrame(
-            {"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)}
-        )
+        df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
         pd_val = df.applymap(math_foo)
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
@@ -532,16 +502,12 @@ class TestPandasTransformation(TestSwifter):
         LOG.info("test_rolling_apply_on_empty_dataframe")
         df = pd.DataFrame(columns=["x", "y"])
         pd_val = df.rolling(1).apply(math_agg_foo, raw=True)
-        swifter_val = (
-            df.swifter.set_npartitions(4).rolling(1).apply(math_agg_foo, raw=True)
-        )
+        swifter_val = df.swifter.set_npartitions(4).rolling(1).apply(math_agg_foo, raw=True)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_resample_apply_on_empty_dataframe(self):
         LOG.info("test_resample_apply_on_empty_dataframe")
-        df = pd.DataFrame(
-            columns=["x", "y"], index=pd.date_range(start="2020/01/01", periods=0)
-        )
+        df = pd.DataFrame(columns=["x", "y"], index=pd.date_range(start="2020/01/01", periods=0))
         pd_val = df.resample("1d").apply(math_agg_foo)
         swifter_val = df.swifter.set_npartitions(4).resample("1d").apply(math_agg_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
@@ -562,19 +528,14 @@ class TestPandasTransformation(TestSwifter):
         self.assertEqual(pd_val, swifter_val)  # equality test
 
     def test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar(self):
-        LOG.info(
-            "test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar"
-        )
+        LOG.info("test_nonvectorized_math_apply_on_small_rolling_dataframe_no_progress_bar")
         df = pd.DataFrame(
             {"x": np.arange(0, 1000)},
             index=pd.date_range("2019-01-1", "2020-01-1", periods=1000),
         )
         pd_val = df.rolling("1d").apply(math_agg_foo, raw=True)
         swifter_val = (
-            df.swifter.set_npartitions(4)
-            .rolling("1d")
-            .progress_bar(enable=False)
-            .apply(math_agg_foo, raw=True)
+            df.swifter.set_npartitions(4).rolling("1d").progress_bar(enable=False).apply(math_agg_foo, raw=True)
         )
         self.assertEqual(pd_val, swifter_val)  # equality test
 
@@ -719,9 +680,7 @@ class TestModinSeries(TestSwifter):
         df = md.Series(np.random.uniform(size=20_000_000), name="x")
         start_md = time.time()
         md_val = df.apply(math_vec_square, axis=0)
-        md_pd_val = (
-            md_val._to_pandas()
-        )  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
         end_md = time.time()
         md_time = end_md - start_md
 
@@ -734,9 +693,7 @@ class TestModinSeries(TestSwifter):
         swifter_time = end_swifter - start_swifter
 
         self.assertEqual(md_val, swifter_val)  # equality test
-        self.assertEqual(
-            md_pd_val, swifter_pd_val
-        )  # equality test after converting to pandas
+        self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
 
 
@@ -808,9 +765,7 @@ class TestModinDataFrame(TestSwifter):
         )
         start_md = time.time()
         md_val = df.apply(math_vec_square, axis=1)
-        md_pd_val = (
-            md_val._to_pandas()
-        )  # We have to bring it into pandas to confirm swifter apply speed is quicker
+        md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
         end_md = time.time()
         md_time = end_md - start_md
 
@@ -823,7 +778,5 @@ class TestModinDataFrame(TestSwifter):
         swifter_time = end_swifter - start_swifter
 
         self.assertEqual(md_val, swifter_val)  # equality test
-        self.assertEqual(
-            md_pd_val, swifter_pd_val
-        )  # equality test after converting to pandas
+        self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
         self.assertLess(swifter_time, md_time)  # speed test
