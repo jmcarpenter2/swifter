@@ -239,7 +239,7 @@ class SeriesAccessor(_SwifterObject):
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 self._validate_apply(
-                    np.array_equal(sample_df, tmp_df) & (sample_df.shape == tmp_df.shape),
+                    np.array_equal(sample_df, tmp_df) & (hasattr(tmp_df, "shape")) & (sample_df.shape == tmp_df.shape),
                     error_message=("Vectorized function sample doesn't match pandas apply sample."),
                 )
             return func(self._obj, *args, **kwds)
@@ -325,8 +325,7 @@ class DataFrameAccessor(_SwifterObject):
                     )
                     .compute(scheduler=self._scheduler)
                 )
-        except ERRORS_TO_HANDLE as e:
-            print(e)
+        except ERRORS_TO_HANDLE:
             # if dask apply doesn't match pandas apply, fallback to pandas
             if self._progress_bar:
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
@@ -354,7 +353,7 @@ class DataFrameAccessor(_SwifterObject):
                 tmp_df = func(sample, *args, **kwds)
                 sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 self._validate_apply(
-                    np.array_equal(sample_df, tmp_df) & (sample_df.shape == tmp_df.shape),
+                    np.array_equal(sample_df, tmp_df) & (hasattr(tmp_df, "shape")) & (sample_df.shape == tmp_df.shape),
                     error_message=("Vectorized function sample does not match pandas apply sample."),
                 )
             return func(self._obj, *args, **kwds)
