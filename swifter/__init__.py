@@ -21,4 +21,4 @@ __all__ = [
     "register_parallel_series_accessor",
     "register_modin",
 ]
-__version__ = "1.1.2"
+__version__ = "1.1.3"

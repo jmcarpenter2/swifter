@@ -79,7 +79,7 @@ class ParallelSeriesAccessor(_SwifterParallelBaseObject):
         if not self._nrows:
             return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
-        sample = self._obj.iloc[:20]
+        sample = self._obj.iloc[self._SAMPLE_INDEX]
         if "axis" in kwds.keys():
             kwds.pop("axis")
             warnings.warn("Axis keyword not necessary because applying on a Series.")
@@ -87,16 +87,10 @@ class ParallelSeriesAccessor(_SwifterParallelBaseObject):
         try:  # try to vectorize
             with suppress_stdout_stderr_logging():
                 tmp_df = func(sample, *args, **kwds)
-                sample_df = sample.apply(
-                    func, convert_dtype=convert_dtype, args=args, **kwds
-                )
+                sample_df = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
                 self._validate_apply(
-                    np.array_equal(sample_df, tmp_df)
-                    & (sample_df.shape == tmp_df.shape),
-                    error_message=(
-                        "Vectorized function sample doesn't "
-                        "match parallel series apply sample."
-                    ),
+                    np.array_equal(sample_df, tmp_df) & (sample_df.shape == tmp_df.shape),
+                    error_message=("Vectorized function sample doesn't " "match parallel series apply sample."),
                 )
             return func(self._obj, *args, **kwds)
         except ERRORS_TO_HANDLE:  # if can't vectorize, return regular apply
@@ -110,31 +104,21 @@ class ParallelDataFrameAccessor(_SwifterParallelBaseObject):
         """
         # If there are no rows return early using default
         if not self._nrows:
-            return self._obj.apply(
-                func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
-            )
+            return self._obj.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
 
-        sample = self._obj.iloc[:20, :]
+        sample = self._obj.iloc[self._SAMPLE_INDEX]
 
         try:  # try to vectorize
             with suppress_stdout_stderr_logging():
                 tmp_df = func(sample, *args, **kwds)
-                sample_df = sample.apply(
-                    func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
-                )
+                sample_df = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
                 self._validate_apply(
-                    np.array_equal(sample_df, tmp_df)
-                    & (sample_df.shape == tmp_df.shape),
-                    error_message=(
-                        "Vectorized function sample doesn't "
-                        "match parallel dataframe apply sample."
-                    ),
+                    np.array_equal(sample_df, tmp_df) & (sample_df.shape == tmp_df.shape),
+                    error_message=("Vectorized function sample doesn't " "match parallel dataframe apply sample."),
                 )
             return func(self._obj, *args, **kwds)
         except ERRORS_TO_HANDLE:  # if can't vectorize, return regular apply
-            return self._obj.apply(
-                func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
-            )
+            return self._obj.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
 
 
 def register_parallel_series_accessor(series_to_register):

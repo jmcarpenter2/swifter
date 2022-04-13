@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.1.3 -- 2022-04-12
+* Enhance the robustness of swifter by randomizing the sample index to avoid sparse data impacting the validity of apply validation
+* Resolve issue where functions that return a non array-like cause swifter to fail on vectorization
+
 ## Version 1.1.2 -- 2022-02-07
 * Resolve installation issue by removing import from setup.py
 

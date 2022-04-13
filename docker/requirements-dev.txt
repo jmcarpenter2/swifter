@@ -7,7 +7,7 @@ ipywidgets>=7.0.0
 cloudpickle>=0.2.2
 parso>0.4.0
 bleach>=3.1.1
-black==22.1.0
+black==22.3.0
 flake8==3.7.7
 perfplot==0.7.3
 pytest==6.2.2

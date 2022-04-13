@@ -21,7 +21,7 @@ jobs:
       - run:
           name: Black lint check
           command: |
-            cd swifter && black --check .
+            cd swifter && black --line-length 120 --check .
       - run:
           name: Unit tests
           command: |
