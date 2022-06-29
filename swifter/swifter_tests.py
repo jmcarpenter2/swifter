@@ -113,6 +113,117 @@ class TestSwifter(unittest.TestCase):
 
 
 class TestSetup(TestSwifter):
+    def test_set_defaults(self):
+        LOG.info("test_set_defaults")
+        from swifter import set_defaults
+
+        expected_npartitions = 2
+        expected_dask_threshold = 1.5
+        expected_scheduler = "threads"
+        expected_progress_bar = False
+        expected_progress_bar_desc = "TEST"
+        expected_allow_dask_on_strings = True
+        set_defaults(
+            npartitions=expected_npartitions,
+            dask_threshold=expected_dask_threshold,
+            scheduler=expected_scheduler,
+            progress_bar=expected_progress_bar,
+            progress_bar_desc=expected_progress_bar_desc,
+            allow_dask_on_strings=expected_allow_dask_on_strings,
+        )
+        for swifter_df in [
+            pd.DataFrame().swifter,
+            pd.Series().swifter,
+            pd.DataFrame(
+                {"x": np.arange(0, 10)},
+                index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
+            ).swifter.rolling("1d"),
+            pd.DataFrame(
+                {"x": np.arange(0, 10)},
+                index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
+            ).swifter.resample("3T"),
+        ]:
+            swifter_df._npartitions == expected_npartitions
+            swifter_df._dask_threshold == expected_dask_threshold
+            swifter_df._scheduler == expected_scheduler
+            swifter_df._progress_bar == expected_progress_bar
+            swifter_df._progress_bar_desc == expected_progress_bar_desc
+            swifter_df._allow_dask_on_strings == expected_allow_dask_on_strings
+
+    def test_override_defaults(self):
+        LOG.info("test_set_defaults")
+        from swifter import set_defaults
+
+        set_npartitions = 2
+        set_dask_threshold = 1.5
+        set_scheduler = "threads"
+        set_progress_bar = False
+        set_progress_bar_desc = "TEST"
+        set_allow_dask_on_strings = True
+
+        expected_npartitions = 3
+        expected_dask_threshold = 4.5
+        expected_scheduler = "processes"
+        expected_progress_bar = True
+        expected_progress_bar_desc = "TEST-AGAIN"
+        expected_allow_dask_on_strings = False
+        set_defaults(
+            npartitions=set_npartitions,
+            dask_threshold=set_dask_threshold,
+            scheduler=set_scheduler,
+            progress_bar=set_progress_bar,
+            progress_bar_desc=set_progress_bar_desc,
+            allow_dask_on_strings=set_allow_dask_on_strings,
+        )
+        for swifter_df_1, swifter_df_2 in [
+            [pd.DataFrame().swifter, pd.Series().swifter],
+            [
+                pd.Series().swifter,
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)},
+                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
+                ).swifter.rolling("1d"),
+            ],
+            [
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)},
+                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
+                ).swifter.rolling("1d"),
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)},
+                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
+                ).swifter.resample("3T"),
+            ],
+            [
+                pd.DataFrame(
+                    {"x": np.arange(0, 10)},
+                    index=pd.date_range("2019-01-1", "2020-01-1", periods=10),
+                ).swifter.resample("3T"),
+                pd.DataFrame().swifter,
+            ],
+        ]:
+            swifter_df_1 = (
+                swifter_df_1.set_npartitions(npartitions=expected_npartitions)
+                .set_dask_threshold(dask_threshold=expected_dask_threshold)
+                .set_dask_scheduler(scheduler=expected_scheduler)
+                .progress_bar(enable=expected_progress_bar, desc=expected_progress_bar_desc)
+                .allow_dask_on_strings(enable=expected_allow_dask_on_strings)
+            )
+
+            swifter_df_1._npartitions == expected_npartitions
+            swifter_df_1._dask_threshold == expected_dask_threshold
+            swifter_df_1._scheduler == expected_scheduler
+            swifter_df_1._progress_bar == expected_progress_bar
+            swifter_df_1._progress_bar_desc == expected_progress_bar_desc
+            swifter_df_1._allow_dask_on_strings == expected_allow_dask_on_strings
+
+            swifter_df_2._npartitions == set_npartitions
+            swifter_df_2._dask_threshold == set_dask_threshold
+            swifter_df_2._scheduler == set_scheduler
+            swifter_df_2._progress_bar == set_progress_bar
+            swifter_df_2._progress_bar_desc == set_progress_bar_desc
+            swifter_df_2._allow_dask_on_strings == set_allow_dask_on_strings
+
     def test_set_npartitions(self):
         LOG.info("test_set_npartitions")
         for swifter_df, set_npartitions, expected in zip(
