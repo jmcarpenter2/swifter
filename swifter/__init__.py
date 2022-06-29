@@ -2,7 +2,7 @@
 import sys
 import warnings
 from logging import config
-from .swifter import SeriesAccessor, DataFrameAccessor
+from .swifter import SeriesAccessor, DataFrameAccessor, set_defaults
 from .parallel_accessor import (
     register_parallel_dataframe_accessor,
     register_parallel_series_accessor,
@@ -15,10 +15,11 @@ if "modin.pandas" in sys.modules:
     register_modin()
 
 __all__ = [
+    "set_defaults",
     "SeriesAccessor",
     "DataFrameAccessor",
     "register_parallel_dataframe_accessor",
     "register_parallel_series_accessor",
     "register_modin",
 ]
-__version__ = "1.1.3"
+__version__ = "1.1.4"

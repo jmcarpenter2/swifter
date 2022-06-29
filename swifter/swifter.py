@@ -16,17 +16,64 @@ from .base import (
     N_REPEATS,
 )
 
+DEFAULT_KWARGS = {
+    "npartitions": None,
+    "dask_threshold": 1,
+    "scheduler": "processes",
+    "progress_bar": True,
+    "progress_bar_desc": None,
+    "allow_dask_on_strings": False,
+}
 
-class _SwifterObject(_SwifterBaseObject):
-    def __init__(
-        self,
-        pandas_obj,
+
+def register_default_config_dataframe_accessor(dataframe_to_register, kwargs):
+    """
+    Register dataframe type with default swifter config
+    """
+    current_init = dataframe_to_register.__init__
+
+    def new_init(self, *args, **kwds):
+        current_init(self, *args, **kwds)
+        self.swifter = (
+            self.swifter.set_npartitions(npartitions=kwargs.get("npartitions", DEFAULT_KWARGS["npartitions"]))
+            .set_dask_threshold(dask_threshold=kwargs.get("dask_threshold", DEFAULT_KWARGS["dask_threshold"]))
+            .set_dask_scheduler(scheduler=kwargs.get("scheduler", DEFAULT_KWARGS["scheduler"]))
+            .progress_bar(
+                enable=kwargs.get("progress_bar", DEFAULT_KWARGS["progress_bar"]),
+                desc=kwargs.get("progress_bar_desc", DEFAULT_KWARGS["progress_bar_desc"]),
+            )
+            .allow_dask_on_strings(enable=kwargs.get("allow_dask_on_strings", DEFAULT_KWARGS["allow_dask_on_strings"]))
+        )
+
+    dataframe_to_register.__init__ = new_init
+
+
+def set_defaults(**kwargs):
+    """
+    Register swifter's default kwargs
         npartitions=None,
         dask_threshold=1,
         scheduler="processes",
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
+    """
+    from pandas import Series, DataFrame
+
+    register_default_config_dataframe_accessor(Series, kwargs)
+    register_default_config_dataframe_accessor(DataFrame, kwargs)
+
+
+class _SwifterObject(_SwifterBaseObject):
+    def __init__(
+        self,
+        pandas_obj,
+        npartitions=DEFAULT_KWARGS["npartitions"],
+        dask_threshold=DEFAULT_KWARGS["dask_threshold"],
+        scheduler=DEFAULT_KWARGS["scheduler"],
+        progress_bar=DEFAULT_KWARGS["progress_bar"],
+        progress_bar_desc=DEFAULT_KWARGS["progress_bar_desc"],
+        allow_dask_on_strings=DEFAULT_KWARGS["allow_dask_on_strings"],
     ):
         super().__init__(base_obj=pandas_obj, npartitions=npartitions)
         if self._obj.index.duplicated().any():
