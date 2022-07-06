@@ -384,7 +384,7 @@ class TestPandasSeries(TestSwifter):
 
     def test_vectorized_math_apply_on_large_series(self):
         LOG.info("test_vectorized_math_apply_on_large_series")
-        df = pd.DataFrame({"x": np.random.normal(size=2_000_000)})
+        df = pd.DataFrame({"x": np.random.normal(size=10_000_000)})
         series = df["x"]
 
         tqdm.pandas(desc="Pandas Vec math apply ~ Series")
@@ -395,9 +395,7 @@ class TestPandasSeries(TestSwifter):
 
         start_swifter = time.time()
         swifter_val = (
-            series.swifter.set_npartitions(4)
-            .progress_bar(desc="Vec math apply ~ Series")
-            .apply(math_vec_square, axis=0)
+            series.swifter.set_npartitions(4).progress_bar(desc="Vec math apply ~ Series").apply(math_vec_square)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -435,9 +433,9 @@ class TestPandasSeries(TestSwifter):
         df = pd.DataFrame({"x": np.random.normal(size=2_000_000)})
         series = df["x"]
 
-        tqdm.pandas(desc="Pandas Nonvec math apply ~ Series")
+        tqdm.pandas(desc="Pandas Vec math apply ~ Series")
         start_pd = time.time()
-        pd_val = series.progress_apply(math_vec_square, compare_to=1)
+        pd_val = series.progress_apply(math_vec_square)
         end_pd = time.time()
         pd_time = end_pd - start_pd
 
@@ -445,8 +443,8 @@ class TestPandasSeries(TestSwifter):
         swifter_val = (
             series.swifter.set_npartitions(4)
             .force_parallel(True)
-            .progress_bar(desc="Forced Parallel - Vec math apply ~ Series")
-            .apply(math_vec_square, compare_to=1)
+            .progress_bar(desc="Force Parallel - Vec math apply ~ Series")
+            .apply(math_vec_square)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -938,24 +936,18 @@ class TestModinSeries(TestSwifter):
     def test_vectorized_modin_apply_on_large_series(self):
         LOG.info("test_vectorized_modin_apply_on_large_series")
         md = self.modinSetUp()
-        df = md.Series(np.random.uniform(size=20_000_000), name="x")
-        start_md = time.time()
+        df = md.Series(np.random.uniform(size=10_000_000), name="x")
+
         md_val = df.apply(math_vec_square, axis=0)
         md_pd_val = md_val._to_pandas()  # We have to bring it into pandas to confirm swifter apply speed is quicker
-        end_md = time.time()
-        md_time = end_md - start_md
 
-        start_swifter = time.time()
         swifter_val = df.swifter.set_npartitions(4).apply(math_vec_square)
         swifter_pd_val = (
             swifter_val._to_pandas()
         )  # We have to bring it into pandas to confirm swifter apply speed is quicker
-        end_swifter = time.time()
-        swifter_time = end_swifter - start_swifter
 
         self.assertEqual(md_val, swifter_val)  # equality test
         self.assertEqual(md_pd_val, swifter_pd_val)  # equality test after converting to pandas
-        self.assertLess(swifter_time, md_time)  # speed test
 
 
 @run_if_modin_installed

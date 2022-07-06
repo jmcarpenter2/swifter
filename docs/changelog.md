@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.1.5 -- 2022-07-06
+## Version 1.2.0 -- 2022-07-06
 * Enable users to `force_parallel` which immediately forces swifter to jump to using dask apply. This enables a simple interface for parallel processing, but disables swifter's algorithm to determine the fastest apply solution possible.
 
 ## Version 1.1.4 -- 2022-06-29
