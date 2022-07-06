@@ -123,6 +123,7 @@ class TestSetup(TestSwifter):
         expected_progress_bar = False
         expected_progress_bar_desc = "TEST"
         expected_allow_dask_on_strings = True
+        expected_force_parallel = True
         set_defaults(
             npartitions=expected_npartitions,
             dask_threshold=expected_dask_threshold,
@@ -130,6 +131,7 @@ class TestSetup(TestSwifter):
             progress_bar=expected_progress_bar,
             progress_bar_desc=expected_progress_bar_desc,
             allow_dask_on_strings=expected_allow_dask_on_strings,
+            force_parallel=expected_force_parallel,
         )
         for swifter_df in [
             pd.DataFrame().swifter,
@@ -149,6 +151,7 @@ class TestSetup(TestSwifter):
             swifter_df._progress_bar == expected_progress_bar
             swifter_df._progress_bar_desc == expected_progress_bar_desc
             swifter_df._allow_dask_on_strings == expected_allow_dask_on_strings
+            swifter_df._force_parallel == expected_force_parallel
 
     def test_override_defaults(self):
         LOG.info("test_set_defaults")
@@ -160,6 +163,7 @@ class TestSetup(TestSwifter):
         set_progress_bar = False
         set_progress_bar_desc = "TEST"
         set_allow_dask_on_strings = True
+        set_force_parallel = True
 
         expected_npartitions = 3
         expected_dask_threshold = 4.5
@@ -167,6 +171,7 @@ class TestSetup(TestSwifter):
         expected_progress_bar = True
         expected_progress_bar_desc = "TEST-AGAIN"
         expected_allow_dask_on_strings = False
+        expected_force_parallel = False
         set_defaults(
             npartitions=set_npartitions,
             dask_threshold=set_dask_threshold,
@@ -174,6 +179,7 @@ class TestSetup(TestSwifter):
             progress_bar=set_progress_bar,
             progress_bar_desc=set_progress_bar_desc,
             allow_dask_on_strings=set_allow_dask_on_strings,
+            force_parallel=set_force_parallel,
         )
         for swifter_df_1, swifter_df_2 in [
             [pd.DataFrame().swifter, pd.Series().swifter],
@@ -208,6 +214,7 @@ class TestSetup(TestSwifter):
                 .set_dask_scheduler(scheduler=expected_scheduler)
                 .progress_bar(enable=expected_progress_bar, desc=expected_progress_bar_desc)
                 .allow_dask_on_strings(enable=expected_allow_dask_on_strings)
+                .force_parallel(enable=expected_force_parallel)
             )
 
             swifter_df_1._npartitions == expected_npartitions
@@ -216,6 +223,7 @@ class TestSetup(TestSwifter):
             swifter_df_1._progress_bar == expected_progress_bar
             swifter_df_1._progress_bar_desc == expected_progress_bar_desc
             swifter_df_1._allow_dask_on_strings == expected_allow_dask_on_strings
+            swifter_df_1._force_parallel == expected_force_parallel
 
             swifter_df_2._npartitions == set_npartitions
             swifter_df_2._dask_threshold == set_dask_threshold
@@ -223,6 +231,7 @@ class TestSetup(TestSwifter):
             swifter_df_2._progress_bar == set_progress_bar
             swifter_df_2._progress_bar_desc == set_progress_bar_desc
             swifter_df_2._allow_dask_on_strings == set_allow_dask_on_strings
+            swifter_df_2._force_parallel = set_force_parallel
 
     def test_set_npartitions(self):
         LOG.info("test_set_npartitions")
@@ -322,6 +331,16 @@ class TestSetup(TestSwifter):
         self.assertEqual(actual, expected)
         self.assertNotEqual(before, actual)
 
+    def test_force_parallel(self):
+        LOG.info("test_force_parallel")
+        expected = True
+        swifter_df = pd.DataFrame().swifter
+        before = swifter_df._force_parallel
+        swifter_df.force_parallel(expected)
+        actual = swifter_df._force_parallel
+        self.assertEqual(actual, expected)
+        self.assertNotEqual(before, actual)
+
     def test_stdout_redirected(self):
         LOG.info("test_stdout_redirected")
         print_messages = subprocess.check_output(
@@ -403,6 +422,31 @@ class TestPandasSeries(TestSwifter):
             series.swifter.set_npartitions(4)
             .progress_bar(desc="Nonvec math apply ~ Series")
             .apply(math_foo, compare_to=1)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_vectorized_force_parallel_math_apply_on_large_series(self):
+        LOG.info("test_vectorized_force_parallel_math_apply_on_large_series")
+        df = pd.DataFrame({"x": np.random.normal(size=2_000_000)})
+        series = df["x"]
+
+        tqdm.pandas(desc="Pandas Nonvec math apply ~ Series")
+        start_pd = time.time()
+        pd_val = series.progress_apply(math_vec_square, compare_to=1)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            series.swifter.set_npartitions(4)
+            .force_parallel(True)
+            .progress_bar(desc="Forced Parallel - Vec math apply ~ Series")
+            .apply(math_vec_square, compare_to=1)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -543,6 +587,35 @@ class TestPandasDataFrame(TestSwifter):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
+    def test_vectorized_force_parallel_math_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_math_apply_on_large_dataframe")
+        df = pd.DataFrame(
+            {
+                "x": np.random.normal(size=1_000_000),
+                "y": np.random.uniform(size=1_000_000),
+            }
+        )
+
+        tqdm.pandas(desc="Pandas Nonvec math apply ~ DF")
+        start_pd = time.time()
+        pd_val = df.progress_apply(math_vec_multiply, axis=1)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .force_parallel(True)
+            .progress_bar(desc="Forced Parallel - Vec math apply ~ DF")
+            .apply(math_vec_multiply, axis=1)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
     def test_vectorized_math_applymap_on_large_dataframe(self):
         LOG.info("test_vectorized_math_applymap_on_large_dataframe")
         df = pd.DataFrame(
@@ -561,6 +634,35 @@ class TestPandasDataFrame(TestSwifter):
         start_swifter = time.time()
         swifter_val = (
             df.swifter.set_npartitions(4).progress_bar(desc="Vec math applymap ~ DF").applymap(math_vec_square)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
+    def test_vectorized_force_parallel_math_applymap_on_large_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_math_applymap_on_large_dataframe")
+        df = pd.DataFrame(
+            {
+                "x": np.random.normal(size=2_000_000),
+                "y": np.random.uniform(size=2_000_000),
+            }
+        )
+
+        tqdm.pandas(desc="Pandas Vec math applymap ~ DF")
+        start_pd = time.time()
+        pd_val = df.progress_applymap(math_vec_square)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .force_parallel(True)
+            .progress_bar(desc="Force Parallel ~ Vec math applymap ~ DF")
+            .applymap(math_vec_square)
         )
         end_swifter = time.time()
         swifter_time = end_swifter - start_swifter
@@ -691,6 +793,22 @@ class TestPandasTransformation(TestSwifter):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
+    def test_vectorized_force_parallel_math_apply_on_large_rolling_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_math_apply_on_large_rolling_dataframe")
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)},
+            index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000),
+        )
+        pd_val = df.rolling("1d").apply(max, raw=True)
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .force_parallel(True)
+            .rolling("1d")
+            .progress_bar(desc="Force Parallel ~ Vec math apply ~ Rolling DF")
+            .apply(max, raw=True)
+        )
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
     def test_nonvectorized_math_apply_on_small_resampler_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_small_resampler_dataframe")
         df = pd.DataFrame(
@@ -732,6 +850,33 @@ class TestPandasTransformation(TestSwifter):
         if self.ncores > 1:  # speed test
             self.assertLess(swifter_time, pd_time)
 
+    def test_nonvectorized_force_parallel_math_apply_on_large_resampler_dataframe(self):
+        LOG.info("test_nonvectorized_force_parallel_math_apply_on_large_resampler_dataframe")
+        df = pd.DataFrame(
+            {"x": np.arange(0, 1_000_000)},
+            index=pd.date_range("2019-01-1", "2020-01-1", periods=1_000_000),
+        )
+
+        start_pd = time.time()
+        pd_val = df.resample("3T").apply(math_agg_foo)
+        end_pd = time.time()
+        pd_time = end_pd - start_pd
+
+        start_swifter = time.time()
+        swifter_val = (
+            df.swifter.set_npartitions(4)
+            .force_parallel(True)
+            .resample("3T")
+            .progress_bar(desc="Force Parallel ~ Nonvec math apply ~ Resample DF")
+            .apply(math_agg_foo)
+        )
+        end_swifter = time.time()
+        swifter_time = end_swifter - start_swifter
+
+        self.assertEqual(pd_val, swifter_val)  # equality test
+        if self.ncores > 1:  # speed test
+            self.assertLess(swifter_time, pd_time)
+
 
 @run_if_modin_installed
 class TestModinSeries(TestSwifter):
@@ -757,6 +902,11 @@ class TestModinSeries(TestSwifter):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             series.swifter.progress_bar(False)
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            series.swifter.force_parallel(False)
             self.assertEqual(len(w), 1)
 
     def test_modin_series_errors_on_missing_transformations(self):
@@ -832,6 +982,11 @@ class TestModinDataFrame(TestSwifter):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             df.swifter.progress_bar(False)
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            df.swifter.force_parallel(False)
             self.assertEqual(len(w), 1)
 
     def test_modin_dataframe_errors_on_missing_transformations(self):

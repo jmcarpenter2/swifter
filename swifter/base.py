@@ -41,7 +41,6 @@ class _SwifterBaseObject:
         self._nrows = self._obj.shape[0]
         self._SAMPLE_SIZE = SAMPLE_SIZE if self._nrows > (25 * SAMPLE_SIZE) else int(ceil(self._nrows / 25))
         self._SAMPLE_INDEX = sorted(np.random.choice(range(self._nrows), size=self._SAMPLE_SIZE, replace=False))
-        self._ray_memory = None
         self.set_npartitions(npartitions=npartitions)
 
     @staticmethod

@@ -23,6 +23,7 @@ DEFAULT_KWARGS = {
     "progress_bar": True,
     "progress_bar_desc": None,
     "allow_dask_on_strings": False,
+    "force_parallel": False,
 }
 
 
@@ -43,6 +44,7 @@ def register_default_config_dataframe_accessor(dataframe_to_register, kwargs):
                 desc=kwargs.get("progress_bar_desc", DEFAULT_KWARGS["progress_bar_desc"]),
             )
             .allow_dask_on_strings(enable=kwargs.get("allow_dask_on_strings", DEFAULT_KWARGS["allow_dask_on_strings"]))
+            .force_parallel(enable=kwargs.get("force_parallel", DEFAULT_KWARGS["force_parallel"]))
         )
 
     dataframe_to_register.__init__ = new_init
@@ -74,6 +76,7 @@ class _SwifterObject(_SwifterBaseObject):
         progress_bar=DEFAULT_KWARGS["progress_bar"],
         progress_bar_desc=DEFAULT_KWARGS["progress_bar_desc"],
         allow_dask_on_strings=DEFAULT_KWARGS["allow_dask_on_strings"],
+        force_parallel=DEFAULT_KWARGS["force_parallel"],
     ):
         super().__init__(base_obj=pandas_obj, npartitions=npartitions)
         if self._obj.index.duplicated().any():
@@ -87,6 +90,7 @@ class _SwifterObject(_SwifterBaseObject):
         self._progress_bar = progress_bar
         self._progress_bar_desc = progress_bar_desc
         self._allow_dask_on_strings = allow_dask_on_strings
+        self._force_parallel = force_parallel
 
     def set_dask_threshold(self, dask_threshold=1):
         """
@@ -120,6 +124,15 @@ class _SwifterObject(_SwifterBaseObject):
         self._allow_dask_on_strings = enable
         return self
 
+    def force_parallel(self, enable=True):
+        """
+        Force swifter to use dask parallel processing, without attempting any
+        vectorized solution or estimating pandas apply duration to determine
+        what will be the fastest approach
+        """
+        self._force_parallel = enable
+        return self
+
     def rolling(
         self,
         window,
@@ -150,6 +163,7 @@ class _SwifterObject(_SwifterBaseObject):
             progress_bar=self._progress_bar,
             progress_bar_desc=self._progress_bar_desc,
             allow_dask_on_strings=self._allow_dask_on_strings,
+            force_parallel=self._force_parallel,
             **kwds,
         )
 
@@ -196,6 +210,7 @@ class _SwifterObject(_SwifterBaseObject):
             progress_bar=self._progress_bar,
             progress_bar_desc=self._progress_bar_desc,
             allow_dask_on_strings=self._allow_dask_on_strings,
+            force_parallel=self._force_parallel,
             **kwds,
         )
 
@@ -271,6 +286,10 @@ class SeriesAccessor(_SwifterObject):
         # if the series is empty, return early using Pandas
         if not self._nrows:
             return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+
+        # If parallel processing is forced by the user, then skip the logic and apply dask
+        if self._force_parallel:
+            return self._dask_apply(func, convert_dtype, *args, **kwds)
 
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         # check if input is string or
@@ -390,6 +409,10 @@ class DataFrameAccessor(_SwifterObject):
         if not self._nrows:
             return self._obj.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
 
+        # If parallel processing is forced by the user, then skip the logic and apply dask
+        if self._force_parallel:
+            return self._dask_apply(func, axis, raw, result_type, *args, **kwds)
+
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         # check if input is string
         # or if the user is overriding the string processing default
@@ -478,6 +501,10 @@ class DataFrameAccessor(_SwifterObject):
         if not self._nrows:
             return self._obj.applymap(func)
 
+        # If parallel processing is forced by the user, then skip the logic and apply dask
+        if self._force_parallel:
+            return self._dask_applymap(func)
+
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         # check if input is string
         # or if the user is overriding the string processing default
@@ -522,6 +549,7 @@ class Transformation(_SwifterObject):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
+        force_parallel=False,
     ):
         super(Transformation, self).__init__(
             pandas_obj,
@@ -531,6 +559,7 @@ class Transformation(_SwifterObject):
             progress_bar,
             progress_bar_desc,
             allow_dask_on_strings,
+            force_parallel,
         )
         self._sample_pd = pandas_obj.iloc[: self._SAMPLE_SIZE]
         self._obj_pd = pandas_obj
@@ -555,6 +584,10 @@ class Transformation(_SwifterObject):
         # if the transformed dataframe is empty, return early using Pandas
         if not self._nrows:
             return self._obj_pd.apply(func, *args, **kwds)
+
+        # If parallel processing is forced by the user, then skip the logic and apply dask
+        if self._force_parallel:
+            return self._dask_apply(func, *args, **kwds)
 
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
@@ -584,6 +617,7 @@ class Rolling(Transformation):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
+        force_parallel=False,
         **kwds,
     ):
         super(Rolling, self).__init__(
@@ -594,6 +628,7 @@ class Rolling(Transformation):
             progress_bar=progress_bar,
             progress_bar_desc=progress_bar_desc,
             allow_dask_on_strings=allow_dask_on_strings,
+            force_parallel=force_parallel,
         )
         self._rolling_kwds = kwds.copy()
         self._comparison_pd = self._obj_pd.iloc[: self._SAMPLE_SIZE]
@@ -638,6 +673,7 @@ class Resampler(Transformation):
         progress_bar=True,
         progress_bar_desc=None,
         allow_dask_on_strings=False,
+        force_parallel=False,
         **kwds,
     ):
         super(Resampler, self).__init__(
@@ -648,6 +684,7 @@ class Resampler(Transformation):
             progress_bar=progress_bar,
             progress_bar_desc=progress_bar_desc,
             allow_dask_on_strings=allow_dask_on_strings,
+            force_parallel=force_parallel,
         )
         self._resampler_kwds = kwds.copy()
         self._comparison_pd = self._obj_pd.iloc[: self._SAMPLE_SIZE]

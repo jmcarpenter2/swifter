@@ -35,6 +35,15 @@ class _SwifterParallelBaseObject(_SwifterBaseObject):
         warnings.warn("Parallel Accessor does not use Dask.")
         return self
 
+    def force_parallel(self, enable=True):
+        """
+        Force swifter to use dask parallel processing, without attempting any
+        vectorized solution or estimating pandas apply duration to determine
+        what will be the fastest approach
+        """
+        warnings.warn("Parallel Accessor does not use Dask.")
+        return self
+
     def rolling(
         self,
         window,
