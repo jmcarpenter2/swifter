@@ -22,6 +22,7 @@ set_defaults(
     progress_bar=True,
     progress_bar_desc=None,
     allow_dask_on_strings=False,
+    force_parallel=False,
 )
 ```
 
