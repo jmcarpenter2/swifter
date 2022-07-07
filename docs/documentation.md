@@ -45,6 +45,9 @@ set_defaults(
 `allow_dask_on_strings` : Boolean. Allows user to enable dask parallel processing on string data
     Default: `False`
 
+`force_parallel` : Boolean. Allows user to override swifter algorithm and jump straight to using dask processing
+    Default: `False`
+
 
 
 ## 2. `pandas.Series.swifter.apply` OR `modin.pandas.Series.swifter.apply`
@@ -226,7 +229,19 @@ For example, let's say we have a pandas dataframe df. The following will allow D
 df.swifter.allow_dask_on_strings().apply(lambda x: x+1)
 ```
 
-## 12. `swifter.register_modin()`
+## 11. `pandas.DataFrame.swifter.force_parallel(enable=True).apply`
+
+This flag allows the user to specify to override swifter's default functionality to run try vectorization, sample applies, and determine the fastest apply possible. Instead it forces swifter to use dask.
+```python
+def pandas.DataFrame.swifter.force_parallel(enable=True)
+```
+
+For example, let's say we have a pandas dataframe df. The following will force Dask to process the dataframe.
+```python
+df.swifter.force_parallel().apply(lambda x: x+1)
+```
+
+## 13. `swifter.register_modin()`
 
 This gives access to `modin.DataFrame.swifter.apply(...)` and `modin.Series.swifter.apply(...)`. This registers modin dataframes and series with swifter as accessors.
 * NOTE: This is only necessary if you import swifter BEFORE modin. If you import modin before swifter you do not need to execute this method.
