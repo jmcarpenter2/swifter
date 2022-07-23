@@ -13,6 +13,7 @@ from .base import (
     _SwifterBaseObject,
     suppress_stdout_stderr_logging,
     ERRORS_TO_HANDLE,
+    RAY_INSTALLED,
     N_REPEATS,
 )
 
@@ -25,6 +26,8 @@ DEFAULT_KWARGS = {
     "allow_dask_on_strings": False,
     "force_parallel": False,
 }
+
+GROUPBY_MAX_ROWS_PANDAS_DEFAULT = 5000
 
 
 def register_default_config_dataframe_accessor(dataframe_to_register, kwargs):
@@ -538,18 +541,136 @@ class DataFrameAccessor(_SwifterObject):
 
                 return applymap_func(func)
 
+    def groupby(
+        self, by=None, axis=0, level=None, as_index=True, sort=True, group_keys=True, observed=False, dropna=True
+    ):
+        """
+        Create a swifter groupby object
+        """
+        grpby_kwargs = {
+            "level": level,
+            "as_index": as_index,
+            "sort": sort,
+            "group_keys": group_keys,
+            "observed": observed,
+            "dropna": dropna,
+        }
+        if RAY_INSTALLED:
+            return GroupBy(
+                self._obj,
+                by=[by] if isinstance(by, str) else by,
+                axis=axis,
+                progress_bar=self._progress_bar,
+                progress_bar_desc=self._progress_bar_desc,
+                **grpby_kwargs,
+            )
+        else:
+            raise NotImplementedError(
+                "Ray is required for groupby apply functionality."
+                "Please install `ray` before continuing and then restart your script or kernel."
+            )
+
+
+if RAY_INSTALLED:  # noqa: C901
+
+    class GroupBy(DataFrameAccessor):
+        import ray
+
+        def __init__(
+            self,
+            pandas_obj,
+            by,
+            axis=0,
+            npartitions=DEFAULT_KWARGS["npartitions"],
+            dask_threshold=DEFAULT_KWARGS["dask_threshold"],
+            progress_bar=DEFAULT_KWARGS["progress_bar"],
+            progress_bar_desc="Ray GroupBy Apply",
+            **grpby_kwargs,
+        ):
+            super(GroupBy, self).__init__(
+                pandas_obj,
+                npartitions=npartitions,
+                dask_threshold=dask_threshold,
+                progress_bar=progress_bar,
+                progress_bar_desc=progress_bar_desc,
+            )
+            self._sample_pd = pandas_obj.iloc[self._SAMPLE_INDEX]
+            self._obj_pd = pandas_obj
+            self._nrows = pandas_obj.shape[0]
+            self._by = by
+            self._axis = axis
+            self._grpby_kwargs = grpby_kwargs
+
+        def _wrapped_apply(self, func, *args, **kwds):
+            def wrapped():
+                with suppress_stdout_stderr_logging():
+                    self._sample_pd.groupby(by=self._by, axis=self._axis, **self._grpby_kwargs).apply(
+                        func, *args, **kwds
+                    )
+
+            return wrapped
+
+        # NOTE: All credit for the _ray_apply/_ray_apply_chunk logic goes to github user @diditforlulz273
+        # NOTE: He provided a gist which I adapted to work in swifter's codebase
+        # NOTE: https://gist.github.com/diditforlulz273/06ffa5f5b1c00830671ce0330851352f
+        @ray.remote
+        def _ray_apply_chunk(self, chunk, func, *args, **kwds):
+            # Ray makes data immutable when stored in its memory.
+            # This approach prevents state sharing among processes, but we have a separate chunk for each process
+            # to get rid of copying data, we make it mutable in-place again by this hack
+            for d in range(len(chunk._data.blocks)):
+                try:
+                    chunk._data.blocks[d].values.flags.writeable = True
+                except Exception:
+                    pass
+
+            return chunk.groupby(self._by, axis=self._axis, **self._grpby_kwargs).apply(func, *args, **kwds)
+
+        def _ray_apply(self, func, *args, **kwds):
+            import ray
+
+            unique_groups = self._obj_pd[self._by[0]].unique()
+            n_splits = min(len(unique_groups), self._npartitions)
+            splits = np.array_split(unique_groups, n_splits)
+            chunks = [self._obj_pd.loc[self._obj_pd[self._by[0]].isin(splits[x])] for x in range(n_splits)]
+
+            # Fire and forget
+            chunk_id = [ray.put(ch) for ch in chunks]
+            ray_obj_refs = [
+                self._ray_apply_chunk.remote(self, chunk_id[i], func, *args, **kwds) for i in range(n_splits)
+            ]
+
+            # TQDM progress bar
+            if self._progress_bar:
+                for chunk in tqdm(range(n_splits), desc=self._progress_bar_desc):
+                    ray.wait(ray_obj_refs, num_returns=chunk + 1)
+
+            # Collect, sort, and return
+            return pd.concat(ray.get(ray_obj_refs), axis=self._axis).sort_index()
+
+        def apply(self, func, *args, **kwds):
+            """
+            Apply the function to the groupby swifter object
+            """
+            # if the transformed dataframe is empty or very small, return early using Pandas
+            if not self._nrows or self._nrows <= GROUPBY_MAX_ROWS_PANDAS_DEFAULT:
+                return self._obj_pd.groupby(self._by, axis=self._axis, **self._grpby_kwargs).apply(func, *args, **kwds)
+
+            # Swifter logic can't accurately estimate groupby applies, so always parallelize
+            return self._ray_apply(func, *args, **kwds)
+
 
 class Transformation(_SwifterObject):
     def __init__(
         self,
         pandas_obj,
-        npartitions=None,
-        dask_threshold=1,
-        scheduler="processes",
-        progress_bar=True,
-        progress_bar_desc=None,
-        allow_dask_on_strings=False,
-        force_parallel=False,
+        npartitions=DEFAULT_KWARGS["npartitions"],
+        dask_threshold=DEFAULT_KWARGS["dask_threshold"],
+        scheduler=DEFAULT_KWARGS["scheduler"],
+        progress_bar=DEFAULT_KWARGS["progress_bar"],
+        progress_bar_desc=DEFAULT_KWARGS["progress_bar_desc"],
+        allow_dask_on_strings=DEFAULT_KWARGS["allow_dask_on_strings"],
+        force_parallel=DEFAULT_KWARGS["force_parallel"],
     ):
         super(Transformation, self).__init__(
             pandas_obj,
