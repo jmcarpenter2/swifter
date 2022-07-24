@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.3.0 -- 2022-07-23
+## Version 1.3.1 -- 2022-07-23
 * Enable users to `df.swifter.groupby.apply`, which requires a new package (ray) that now available as an extra_requires.
 * To use groupby apply, install swifter as `pip install -U swifter[groupby]`
 * All credit goes to user @diditforlulz273 for writing the performant groupby apply code, that is now part of swifter!
