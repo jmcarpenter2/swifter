@@ -76,6 +76,7 @@ df['outCol'] = df[['inCol1', 'inCol2', 'inCol3']].swifter.apply(my_func,
 
 ## Highly performant, even for groupby applies
 ![Alt text](/assets/groupby_parallel_v_single_real.png?raw=true)
+![Alt text](/assets/groupby_parallel_v_single_log10.png?raw=true)
 
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).
