@@ -40,6 +40,10 @@ def math_agg_foo(row):
     return row.sum() - row.min()
 
 
+def numeric_func(x):
+    return x["x"].mean() / x["y"].var()
+
+
 def text_foo(row):
     if row["letter"] == "A":
         return row["value"] * 3
@@ -97,6 +101,9 @@ class TestSwifter(unittest.TestCase):
         """
         Imports modin before swifter so that we have access to modin functionality
         """
+        import os
+
+        os.environ["MODIN_ENGINE"] = "dask"
         import modin.pandas as md
         import swifter
 
@@ -469,6 +476,13 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.applymap(math_vec_square)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
+    def test_groupby_apply_on_empty_dataframe(self):
+        LOG.info("test_groupby_apply_on_empty_dataframe")
+        df = pd.DataFrame(columns=["x", "y"])
+        pd_val = df.groupby("x").apply(math_vec_square)
+        swifter_val = df.swifter.groupby("x").apply(math_vec_square)
+        self.assertEqual(pd_val, swifter_val)  # equality test
+
     def test_nonvectorized_math_apply_on_small_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_small_dataframe")
         df = pd.DataFrame({"x": np.random.normal(size=1000), "y": np.random.uniform(size=1000)})
@@ -706,6 +720,100 @@ class TestPandasDataFrame(TestSwifter):
         pd_val = df.applymap(math_foo)
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_vectorized_math_groupby_apply_on_small_dataframe(self):
+        LOG.info("test_vectorized_math_groupby_apply_on_small_dataframe")
+        df = pd.DataFrame(
+            {
+                "g": np.random.choice([0, 1, 2], size=500),
+                "x": np.random.normal(size=500),
+                "y": np.random.uniform(size=500),
+            }
+        )
+        pd_val = df.groupby("g").apply(numeric_func)
+        swifter_val = df.swifter.groupby("g").apply(numeric_func)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_force_parallel_math_groupby_apply_on_small_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_math_groupby_apply_on_small_dataframe")
+        df = pd.DataFrame(
+            {
+                "g": np.random.choice([0, 1, 2], size=500),
+                "x": np.random.normal(size=500),
+                "y": np.random.uniform(size=500),
+            }
+        )
+        pd_val = df.groupby("g").apply(numeric_func)
+        swifter_val = df.swifter.force_parallel(True).groupby("g").apply(numeric_func)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_math_groupby_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_math_groupby_apply_on_large_dataframe")
+        df = pd.DataFrame(
+            {
+                "g": np.random.choice(np.arange(50000), size=500000),
+                "x": np.random.normal(size=500000),
+                "y": np.random.uniform(size=500000),
+            }
+        )
+        pd_val = df.groupby("g").apply(numeric_func)
+        swifter_val = df.swifter.groupby("g").apply(numeric_func)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_force_parallel_math_groupby_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_math_groupby_apply_on_large_dataframe")
+        df = pd.DataFrame(
+            {
+                "g": np.random.choice(np.arange(50000), size=500000),
+                "x": np.random.normal(size=500000),
+                "y": np.random.uniform(size=500000),
+            }
+        )
+        pd_val = df.groupby("g").apply(numeric_func)
+        swifter_val = df.swifter.force_parallel(True).groupby("g").apply(numeric_func)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_text_groupby_apply_on_small_dataframe(self):
+        LOG.info("test_vectorized_text_groupby_apply_on_small_dataframe")
+        df = pd.DataFrame(
+            {"g": np.random.choice([0, 1, 2], size=500), "text": np.random.choice(["A", "B", "C"], size=500)}
+        )
+        pd_val = df.groupby("g").apply(clean_text_foo)
+        swifter_val = df.swifter.groupby("g").apply(clean_text_foo)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_force_parallel_text_groupby_apply_on_small_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_text_groupby_apply_on_small_dataframe")
+        df = pd.DataFrame(
+            {"g": np.random.choice([0, 1, 2], size=500), "text": np.random.choice(["A", "B", "C"], size=500)}
+        )
+        pd_val = df.groupby("g").apply(clean_text_foo)
+        swifter_val = df.swifter.force_parallel(True).groupby("g").apply(clean_text_foo)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_text_groupby_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_text_groupby_apply_on_large_dataframe")
+        df = pd.DataFrame(
+            {
+                "g": np.random.choice(np.arange(50000), size=500000),
+                "text": np.random.choice(["A", "B", "C"], size=500000),
+            }
+        )
+        pd_val = df.groupby("g").apply(clean_text_foo)
+        swifter_val = df.swifter.groupby("g").apply(clean_text_foo)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
+    def test_vectorized_force_parallel_text_groupby_apply_on_large_dataframe(self):
+        LOG.info("test_vectorized_force_parallel_text_groupby_apply_on_large_dataframe")
+        df = pd.DataFrame(
+            {
+                "g": np.random.choice(np.arange(50000), size=500000),
+                "text": np.random.choice(["A", "B", "C"], size=500000),
+            }
+        )
+        pd_val = df.groupby("g").apply(clean_text_foo)
+        swifter_val = df.swifter.force_parallel(True).groupby("g").apply(clean_text_foo)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
 
 class TestPandasTransformation(TestSwifter):

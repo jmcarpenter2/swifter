@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.3.0 -- 2022-07-23
+* Enable users to `df.swifter.groupby.apply`, which requires a new package (ray) that now available as an extra_requires.
+* To use groupby apply, install swifter as `pip install -U swifter[groupby]`
+* All credit goes to user @diditforlulz273 for writing the performant groupby apply code, that is now part of swifter!
+
 ## Version 1.2.0 -- 2022-07-06
 * Enable users to `force_parallel` which immediately forces swifter to jump to using dask apply. This enables a simple interface for parallel processing, but disables swifter's algorithm to determine the fastest apply solution possible.
 

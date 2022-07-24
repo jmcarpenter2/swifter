@@ -1,4 +1,5 @@
 import logging
+import importlib
 import numpy as np
 from os import devnull
 from math import ceil
@@ -13,6 +14,9 @@ try:
 except ImportError:
     pass
 ERRORS_TO_HANDLE = tuple(ERRORS_TO_HANDLE)
+
+RAY_INSTALLED = importlib.util.find_spec("ray") is not None
+
 
 SAMPLE_SIZE = 1000
 N_REPEATS = 3
