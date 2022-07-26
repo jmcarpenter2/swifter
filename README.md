@@ -31,7 +31,8 @@ $ pip install -U swifter[groupby] # upgrade to latest version to include depende
 
 alternatively, to install on [Anaconda](https://anaconda.org/conda-forge/swifter):
 ```
-conda install -c conda-forge swifter
+conda install -c conda-forge swifter  # Install swifter
+conda install -c conda-forge swifter>=1.3.2 ray>=1.0.0  # Install swifter with dependency for groupby.apply
 ```
 
 ...after installing, import `swifter` into your code along with `pandas` using:
