@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 1.3.3 -- 2022-07-28
+* Enable users to pass in `df.index` as the by parameter for the df.swifter.groupby(by).apply(func) command
+
 ## Version 1.3.2 -- 2022-07-23
 * Enable users to `df.swifter.groupby.apply`, which requires a new package (ray) that now available as an extra_requires.
 * To use groupby apply, install swifter as `pip install -U swifter[groupby]`

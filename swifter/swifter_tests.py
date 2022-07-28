@@ -760,6 +760,19 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby("g").apply(numeric_func)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    def test_vectorized_math_groupby_apply_on_large_dataframe_index(self):
+        LOG.info("test_vectorized_math_groupby_apply_on_large_dataframe_index")
+        df = pd.DataFrame(
+            {
+                "x": np.random.normal(size=500000),
+                "y": np.random.uniform(size=500000),
+            },
+            index=np.random.choice(np.arange(50000), size=500000),
+        )
+        pd_val = df.groupby(df.index).apply(numeric_func)
+        swifter_val = df.swifter.groupby(df.index).apply(numeric_func)
+        self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
+
     def test_vectorized_force_parallel_math_groupby_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_force_parallel_math_groupby_apply_on_large_dataframe")
         df = pd.DataFrame(

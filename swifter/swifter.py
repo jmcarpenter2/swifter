@@ -1,5 +1,6 @@
 import timeit
 import warnings
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -601,15 +602,6 @@ if RAY_INSTALLED:  # noqa: C901
             self._axis = axis
             self._grpby_kwargs = grpby_kwargs
 
-        def _wrapped_apply(self, func, *args, **kwds):
-            def wrapped():
-                with suppress_stdout_stderr_logging():
-                    self._sample_pd.groupby(by=self._by, axis=self._axis, **self._grpby_kwargs).apply(
-                        func, *args, **kwds
-                    )
-
-            return wrapped
-
         # NOTE: All credit for the _ray_apply/_ray_apply_chunk logic goes to github user @diditforlulz273
         # NOTE: He provided a gist which I adapted to work in swifter's codebase
         # NOTE: https://gist.github.com/diditforlulz273/06ffa5f5b1c00830671ce0330851352f
@@ -624,15 +616,17 @@ if RAY_INSTALLED:  # noqa: C901
                 except Exception:
                     pass
 
-            return chunk.groupby(self._by, axis=self._axis, **self._grpby_kwargs).apply(func, *args, **kwds)
+            by = chunk.index if self._obj_pd.index.equals(self._by) else self._by
+            return chunk.groupby(by, axis=self._axis, **self._grpby_kwargs).apply(func, *args, **kwds)
 
         def _ray_apply(self, func, *args, **kwds):
             import ray
 
-            unique_groups = self._obj_pd[self._by[0]].unique()
+            subset_df = self._obj_pd.index if self._obj_pd.index.equals(self._by) else self._obj_pd[self._by[0]]
+            unique_groups = subset_df.unique()
             n_splits = min(len(unique_groups), self._npartitions)
             splits = np.array_split(unique_groups, n_splits)
-            chunks = [self._obj_pd.loc[self._obj_pd[self._by[0]].isin(splits[x])] for x in range(n_splits)]
+            chunks = [self._obj_pd.loc[subset_df.isin(splits[x])] for x in range(n_splits)]
 
             # Fire and forget
             chunk_id = [ray.put(ch) for ch in chunks]
