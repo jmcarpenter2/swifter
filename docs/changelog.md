@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 1.3.4 -- 2022-08-16
+* Enable indexing after a groupby, e.g. `df.swifter.groupby(by)[key].apply(func)`
+* Improve groupby apply progress bar
+  - Previously, the groupby apply progress bar only appeared after the data was distributed across the cores.
+  - Now, the groupby apply progress bar appears before the data is distributed for a more realistic reflection of how long it took
+* Additional groupby apply code refactoring and optimizations, including removing the mutability of the data within `ray`
+
 ## Version 1.3.3 -- 2022-07-28
 * Enable users to pass in `df.index` as the by parameter for the df.swifter.groupby(by).apply(func) command
 
