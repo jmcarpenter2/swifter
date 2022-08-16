@@ -12,6 +12,7 @@ import numpy.testing as npt
 import pandas as pd
 import swifter
 
+from .swifter import GROUPBY_MAX_ROWS_PANDAS_DEFAULT
 from tqdm.auto import tqdm
 
 
@@ -482,6 +483,20 @@ class TestPandasDataFrame(TestSwifter):
         pd_val = df.groupby("x").apply(math_vec_square)
         swifter_val = df.swifter.groupby("x").apply(math_vec_square)
         self.assertEqual(pd_val, swifter_val)  # equality test
+
+    def test_groupby_index_apply(self):
+        LOG.info("test_groupby_index_apply")
+        SIZE = GROUPBY_MAX_ROWS_PANDAS_DEFAULT * 2
+        df = pd.DataFrame(
+            {
+                "x": np.random.normal(size=SIZE),
+                "y": np.random.uniform(size=SIZE),
+                "g": np.random.choice(np.arange(100), size=SIZE),
+            }
+        )
+        pd_val = df.groupby("g")["x"].apply(lambda x: x.std())
+        swifter_val = df.swifter.groupby("g")["x"].apply(lambda x: x.std())
+        self.assertEqual(pd_val, swifter_val)
 
     def test_nonvectorized_math_apply_on_small_dataframe(self):
         LOG.info("test_nonvectorized_math_apply_on_small_dataframe")

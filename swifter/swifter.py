@@ -1,12 +1,12 @@
 import timeit
 import warnings
-import itertools
+
 import numpy as np
 import pandas as pd
 
 from abc import abstractmethod
 from dask import dataframe as dd
-
+from functools import partial
 from tqdm.auto import tqdm
 from .tqdm_dask_progressbar import TQDMDaskProgressBar
 
@@ -595,52 +595,59 @@ if RAY_INSTALLED:  # noqa: C901
                 progress_bar=progress_bar,
                 progress_bar_desc=progress_bar_desc,
             )
-            self._sample_pd = pandas_obj.iloc[self._SAMPLE_INDEX]
             self._obj_pd = pandas_obj
             self._nrows = pandas_obj.shape[0]
             self._by = by
+            self._grpby_index = self._obj_pd.index.equals(self._by)
             self._axis = axis
             self._grpby_kwargs = grpby_kwargs
+            self._subset_columns = None
 
-        # NOTE: All credit for the _ray_apply/_ray_apply_chunk logic goes to github user @diditforlulz273
+        def __getitem__(self, key):
+            self._subset_columns = key
+            return self
+
+        # NOTE: All credit for the Ray Groupby Apply logic goes to github user @diditforlulz273
         # NOTE: He provided a gist which I adapted to work in swifter's codebase
         # NOTE: https://gist.github.com/diditforlulz273/06ffa5f5b1c00830671ce0330851352f
-        @ray.remote
-        def _ray_apply_chunk(self, chunk, func, *args, **kwds):
-            # Ray makes data immutable when stored in its memory.
-            # This approach prevents state sharing among processes, but we have a separate chunk for each process
-            # to get rid of copying data, we make it mutable in-place again by this hack
-            for d in range(len(chunk._data.blocks)):
-                try:
-                    chunk._data.blocks[d].values.flags.writeable = True
-                except Exception:
-                    pass
+        def _get_chunks(self):
+            subset_df = self._obj_pd.index if self._grpby_index else self._obj_pd[self._by[0]]
+            unique_groups = subset_df.unique()
+            n_splits = min(len(unique_groups), self._npartitions)
+            splits = np.array_split(unique_groups, n_splits)
+            return [self._obj_pd.loc[subset_df.isin(splits[x])] for x in range(n_splits)]
 
-            by = chunk.index if self._obj_pd.index.equals(self._by) else self._by
-            return chunk.groupby(by, axis=self._axis, **self._grpby_kwargs).apply(func, *args, **kwds)
+        @ray.remote
+        def _ray_groupby_apply_chunk(self, chunk, func, *args, **kwds):
+            by = chunk.index if self._grpby_index else self._by
+            grpby = chunk.groupby(by, axis=self._axis, **self._grpby_kwargs)
+            grpby = grpby if self._subset_columns is None else grpby[self._subset_columns]
+            return grpby.apply(func, *args, **kwds)
+
+        def _ray_submit_apply(self, chunks, func, *args, **kwds):
+            import ray
+
+            return [self._ray_groupby_apply_chunk.remote(self, ray.put(chunk), func, *args, **kwds) for chunk in chunks]
+
+        def _ray_progress_apply(self, ray_submit_apply, total_chunks):
+            import ray
+
+            with tqdm(desc=self._progress_bar_desc, total=total_chunks) as pbar:
+                apply_chunks = ray_submit_apply()
+                for complete_chunk in range(total_chunks):
+                    ray.wait(apply_chunks, num_returns=complete_chunk + 1)
+                    pbar.update(1)
+            return apply_chunks
 
         def _ray_apply(self, func, *args, **kwds):
             import ray
 
-            subset_df = self._obj_pd.index if self._obj_pd.index.equals(self._by) else self._obj_pd[self._by[0]]
-            unique_groups = subset_df.unique()
-            n_splits = min(len(unique_groups), self._npartitions)
-            splits = np.array_split(unique_groups, n_splits)
-            chunks = [self._obj_pd.loc[subset_df.isin(splits[x])] for x in range(n_splits)]
-
-            # Fire and forget
-            chunk_id = [ray.put(ch) for ch in chunks]
-            ray_obj_refs = [
-                self._ray_apply_chunk.remote(self, chunk_id[i], func, *args, **kwds) for i in range(n_splits)
-            ]
-
-            # TQDM progress bar
-            if self._progress_bar:
-                for chunk in tqdm(range(n_splits), desc=self._progress_bar_desc):
-                    ray.wait(ray_obj_refs, num_returns=chunk + 1)
-
-            # Collect, sort, and return
-            return pd.concat(ray.get(ray_obj_refs), axis=self._axis).sort_index()
+            chunks = self._get_chunks()
+            ray_submit_apply = partial(self._ray_submit_apply, chunks=chunks, func=func, *args, **kwds)
+            apply_chunks = (
+                self._ray_progress_apply(ray_submit_apply, len(chunks)) if self._progress_bar else ray_submit_apply()
+            )
+            return pd.concat(ray.get(apply_chunks), axis=self._axis).sort_index()
 
         def apply(self, func, *args, **kwds):
             """
