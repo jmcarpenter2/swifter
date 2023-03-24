@@ -1,10 +1,11 @@
 version: 2.1
 orbs:
+  win: circleci/windows@5.0
   codecov: codecov/codecov@1.0.5
 jobs:
-  unittest-lint-codecov:
+  unittest-lint-codecov-linux:
     parallelism: 1
-    resource_class: xlarge
+    resource_class: xlarge  # 8 vCPU 16GB RAM
     working_directory: ~/repo
     docker:
       - image: python:3.9
@@ -34,8 +35,29 @@ jobs:
       - store_artifacts:
           path: htmlcov
 
+  unittest-windows:
+    parallelism: 1
+    working_directory: ~/repo
+    executor:
+      name: win/default
+      size: large  # 8 vCPU 30GB RAM
+
+    steps:
+      - checkout
+      - run:
+          name: Install requirements
+          command: |
+            pip install -r docker/requirements-dev.txt
+          shell: bash.exe
+      - run:
+          name: Unit tests
+          command: |
+            python -m unittest swifter/swifter_tests.py
+          shell: bash.exe
+
 workflows:
   version: 2
   build-and-test:
     jobs:
-      - unittest-lint-codecov
+      - unittest-lint-codecov-linux
+      - unittest-windows
