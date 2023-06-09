@@ -18,6 +18,7 @@ jobs:
       - run:
           name: Install requirements
           command: |
+            pip install --upgrade pip
             pip install -r docker/requirements-dev.txt
       - run:
           name: Black lint check
@@ -47,7 +48,8 @@ jobs:
       - run:
           name: Install requirements
           command: |
-            pip install -r docker/requirements-dev.txt
+            pip install --upgrade pip
+            pip install -r docker/requirements-windows.txt
           shell: bash.exe
       - run:
           name: Unit tests
