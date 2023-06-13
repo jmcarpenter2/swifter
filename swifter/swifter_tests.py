@@ -13,7 +13,8 @@ import numpy.testing as npt
 import pandas as pd
 import swifter
 
-from .swifter import GROUPBY_MAX_ROWS_PANDAS_DEFAULT
+from .swifter import RAY_INSTALLED, GROUPBY_MAX_ROWS_PANDAS_DEFAULT
+
 from tqdm.auto import tqdm
 
 WINDOWS_CI = "windows" in os.environ.get("CIRCLE_JOB", "")
@@ -73,6 +74,14 @@ def run_if_modin_installed(cls):
     if importlib.util.find_spec("modin") is not None:
         return cls
     else:  # if modin isnt installed just skip the test(s)
+        return True
+
+
+def run_if_ray_installed(func):
+    # if ray is installed, run the test/test suite
+    if RAY_INSTALLED:
+        return func
+    else:  # if ray isnt installed just skip the test(s)
         return True
 
 
@@ -486,6 +495,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.applymap(math_vec_square)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
+    @run_if_ray_installed
     def test_groupby_apply_on_empty_dataframe(self):
         LOG.info("test_groupby_apply_on_empty_dataframe")
         df = pd.DataFrame(columns=["x", "y"])
@@ -493,6 +503,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby("x").apply(math_vec_square)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
+    @run_if_ray_installed
     def test_groupby_index_apply(self):
         LOG.info("test_groupby_index_apply")
         SIZE = GROUPBY_MAX_ROWS_PANDAS_DEFAULT * 2
@@ -745,6 +756,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.progress_bar(enable=False).applymap(math_foo)
         self.assertEqual(pd_val, swifter_val)  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_math_groupby_apply_on_small_dataframe(self):
         LOG.info("test_vectorized_math_groupby_apply_on_small_dataframe")
         df = pd.DataFrame(
@@ -758,6 +770,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby("g").apply(numeric_func)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_force_parallel_math_groupby_apply_on_small_dataframe(self):
         LOG.info("test_vectorized_force_parallel_math_groupby_apply_on_small_dataframe")
         df = pd.DataFrame(
@@ -771,6 +784,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.force_parallel(True).groupby("g").apply(numeric_func)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_math_groupby_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_math_groupby_apply_on_large_dataframe")
         df = pd.DataFrame(
@@ -784,6 +798,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby("g").apply(numeric_func)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_math_groupby_apply_on_large_dataframe_index(self):
         LOG.info("test_vectorized_math_groupby_apply_on_large_dataframe_index")
         df = pd.DataFrame(
@@ -797,6 +812,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby(df.index).apply(numeric_func)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_force_parallel_math_groupby_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_force_parallel_math_groupby_apply_on_large_dataframe")
         df = pd.DataFrame(
@@ -810,6 +826,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.force_parallel(True).groupby("g").apply(numeric_func)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_text_groupby_apply_on_small_dataframe(self):
         LOG.info("test_vectorized_text_groupby_apply_on_small_dataframe")
         df = pd.DataFrame(
@@ -819,6 +836,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby("g").apply(clean_text_foo)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_force_parallel_text_groupby_apply_on_small_dataframe(self):
         LOG.info("test_vectorized_force_parallel_text_groupby_apply_on_small_dataframe")
         df = pd.DataFrame(
@@ -828,6 +846,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.force_parallel(True).groupby("g").apply(clean_text_foo)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_text_groupby_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_text_groupby_apply_on_large_dataframe")
         df = pd.DataFrame(
@@ -840,6 +859,7 @@ class TestPandasDataFrame(TestSwifter):
         swifter_val = df.swifter.groupby("g").apply(clean_text_foo)
         self.assertSeriesEqual(pd_val, swifter_val, "Swifter output does not equal Pandas output")  # equality test
 
+    @run_if_ray_installed
     def test_vectorized_force_parallel_text_groupby_apply_on_large_dataframe(self):
         LOG.info("test_vectorized_force_parallel_text_groupby_apply_on_large_dataframe")
         df = pd.DataFrame(

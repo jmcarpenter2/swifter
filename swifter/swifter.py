@@ -228,59 +228,60 @@ class SeriesAccessor(_SwifterObject):
 
         return wrapped
 
-    def _dask_apply(self, func, convert_dtype, *args, **kwds):
+    def _pandas_apply(self, df, func, convert_dtype, *args, **kwds):
+        if self._progress_bar:
+            tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
+            return df.progress_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+        else:
+            return df.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+
+    def _dask_map_partitions(self, df, func, meta, *args, **kwds):
+        return (
+            dd.from_pandas(df, npartitions=self._npartitions)
+            .map_partitions(func, *args, meta=meta, **kwds)
+            .compute(scheduler=self._scheduler)
+        )
+
+    def _dask_apply(self, df, func, convert_dtype, meta, *args, **kwds):
+        return (
+            dd.from_pandas(df, npartitions=self._npartitions)
+            .apply(
+                lambda x: func(x, *args, **kwds),
+                convert_dtype=convert_dtype,
+                meta=meta,
+            )
+            .compute(scheduler=self._scheduler)
+        )
+
+    def _parallel_apply(self, func, convert_dtype, *args, **kwds):
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         with suppress_stdout_stderr_logging():
             meta = sample.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
         try:
             # check that the dask map partitions matches the pandas apply
             with suppress_stdout_stderr_logging():
-                tmp_df = (
-                    dd.from_pandas(sample, npartitions=self._npartitions)
-                    .map_partitions(func, *args, meta=meta, **kwds)
-                    .compute(scheduler=self._scheduler)
-                )
+                tmp_df = self._dask_map_partitions(sample, func, meta, *args, **kwds)
                 self._validate_apply(
                     tmp_df.equals(meta),
                     error_message=("Dask map-partitions sample does not match pandas apply sample."),
                 )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
-                    return (
-                        dd.from_pandas(self._obj, npartitions=self._npartitions)
-                        .map_partitions(func, *args, meta=meta, **kwds)
-                        .compute(scheduler=self._scheduler)
-                    )
+                    return self._dask_map_partitions(self._obj, func, meta, *args, **kwds)
             else:
-                return (
-                    dd.from_pandas(self._obj, npartitions=self._npartitions)
-                    .map_partitions(func, *args, meta=meta, **kwds)
-                    .compute(scheduler=self._scheduler)
-                )
+                return self._dask_map_partitions(self._obj, func, meta, *args, **kwds)
         except ERRORS_TO_HANDLE:
             # if map partitions doesn't match pandas apply,
             # we can use dask apply, but it will be a bit slower
-            if self._progress_bar:
-                with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
-                    return (
-                        dd.from_pandas(self._obj, npartitions=self._npartitions)
-                        .apply(
-                            lambda x: func(x, *args, **kwds),
-                            convert_dtype=convert_dtype,
-                            meta=meta,
-                        )
-                        .compute(scheduler=self._scheduler)
-                    )
-            else:
-                return (
-                    dd.from_pandas(self._obj, npartitions=self._npartitions)
-                    .apply(
-                        lambda x: func(x, *args, **kwds),
-                        convert_dtype=convert_dtype,
-                        meta=meta,
-                    )
-                    .compute(scheduler=self._scheduler)
-                )
+            try:
+                if self._progress_bar:
+                    with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
+                        return self._dask_apply(self._obj, func, convert_dtype, meta, *args, **kwds)
+                else:
+                    return self._dask_apply(self._obj, func, convert_dtype, meta, *args, **kwds)
+            except ERRORS_TO_HANDLE:
+                # Second fallback to pandas if dask apply fails
+                return self._pandas_apply(self._obj, func, convert_dtype, *args, **kwds)
 
     def apply(self, func, convert_dtype=True, args=(), **kwds):
         """
@@ -293,7 +294,7 @@ class SeriesAccessor(_SwifterObject):
 
         # If parallel processing is forced by the user, then skip the logic and apply dask
         if self._force_parallel:
-            return self._dask_apply(func, convert_dtype, *args, **kwds)
+            return self._parallel_apply(func, convert_dtype, *args, **kwds)
 
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         # check if input is string or
@@ -322,13 +323,9 @@ class SeriesAccessor(_SwifterObject):
             # if pandas sample apply takes too long and not performing str processing
             # then use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
-                return self._dask_apply(func, convert_dtype, *args, **kwds)
+                return self._parallel_apply(func, convert_dtype, *args, **kwds)
             else:  # use pandas
-                if self._progress_bar:
-                    tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                    return self._obj.progress_apply(func, convert_dtype=convert_dtype, args=args, **kwds)
-                else:
-                    return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+                return self._pandas_apply(self._obj, func, convert_dtype, *args, **kwds)
 
 
 @pd.api.extensions.register_dataframe_accessor("swifter")
@@ -342,7 +339,31 @@ class DataFrameAccessor(_SwifterObject):
 
         return wrapped
 
-    def _dask_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
+    def _pandas_apply(self, df, func, axis, raw, result_type, *args, **kwds):
+        if self._progress_bar:
+            tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
+            apply_func = df.progress_apply
+        else:
+            apply_func = df.apply
+
+        return apply_func(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+
+    def _dask_apply(self, df, func, axis, raw, result_type, meta, *args, **kwds):
+        return (
+            dd.from_pandas(df, npartitions=self._npartitions)
+            .apply(
+                func,
+                *args,
+                axis=axis,
+                raw=raw,
+                result_type=result_type,
+                meta=meta,
+                **kwds,
+            )
+            .compute(scheduler=self._scheduler)
+        )
+
+    def _parallel_apply(self, func, axis=0, raw=None, result_type=None, *args, **kwds):
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         with suppress_stdout_stderr_logging():
             meta = sample.apply(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
@@ -368,42 +389,12 @@ class DataFrameAccessor(_SwifterObject):
                 )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Apply"):
-                    return (
-                        dd.from_pandas(self._obj, npartitions=self._npartitions)
-                        .apply(
-                            func,
-                            *args,
-                            axis=axis,
-                            raw=raw,
-                            result_type=result_type,
-                            meta=meta,
-                            **kwds,
-                        )
-                        .compute(scheduler=self._scheduler)
-                    )
+                    return self._dask_apply(self._obj, func, axis, raw, result_type, meta, *args, **kwds)
             else:
-                return (
-                    dd.from_pandas(self._obj, npartitions=self._npartitions)
-                    .apply(
-                        func,
-                        *args,
-                        axis=axis,
-                        raw=raw,
-                        result_type=result_type,
-                        meta=meta,
-                        **kwds,
-                    )
-                    .compute(scheduler=self._scheduler)
-                )
+                return self._dask_apply(self._obj, func, axis, raw, result_type, meta, *args, **kwds)
         except ERRORS_TO_HANDLE:
             # if dask apply doesn't match pandas apply, fallback to pandas
-            if self._progress_bar:
-                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                apply_func = self._obj.progress_apply
-            else:
-                apply_func = self._obj.apply
-
-            return apply_func(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+            return self._pandas_apply(self._obj, func, axis, raw, result_type, *args, **kwds)
 
     def apply(self, func, axis=0, raw=False, result_type=None, args=(), **kwds):
         """
@@ -415,7 +406,7 @@ class DataFrameAccessor(_SwifterObject):
 
         # If parallel processing is forced by the user, then skip the logic and apply dask
         if self._force_parallel:
-            return self._dask_apply(func, axis, raw, result_type, *args, **kwds)
+            return self._parallel_apply(func, axis, raw, result_type, *args, **kwds)
 
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         # check if input is string
@@ -440,15 +431,9 @@ class DataFrameAccessor(_SwifterObject):
             # if pandas sample apply takes too long
             # and not performing str processing, use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing and axis == 1:
-                return self._dask_apply(func, axis, raw, result_type, *args, **kwds)
+                return self._parallel_apply(func, axis, raw, result_type, *args, **kwds)
             else:  # use pandas
-                if self._progress_bar:
-                    tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                    apply_func = self._obj.progress_apply
-                else:
-                    apply_func = self._obj.apply
-
-                return apply_func(func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds)
+                return self._pandas_apply(self._obj, func, axis, raw, result_type, *args, **kwds)
 
     def _wrapped_applymap(self, func):
         def wrapped():
@@ -457,44 +442,42 @@ class DataFrameAccessor(_SwifterObject):
 
         return wrapped
 
-    def _dask_applymap(self, func):
+    def _pandas_applymap(self, df, func):
+        if self._progress_bar:
+            tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
+            applymap_func = df.progress_applymap
+        else:
+            applymap_func = df.applymap
+
+        return applymap_func(func)
+
+    def _dask_applymap(self, df, func, meta):
+        return (
+            dd.from_pandas(df, npartitions=self._npartitions)
+            .applymap(func, meta=meta)
+            .compute(scheduler=self._scheduler)
+        )
+
+    def _parallel_applymap(self, func):
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         with suppress_stdout_stderr_logging():
             meta = sample.applymap(func)
         try:
             with suppress_stdout_stderr_logging():
                 # check that the dask apply matches the pandas apply
-                tmp_df = (
-                    dd.from_pandas(sample, npartitions=self._npartitions)
-                    .applymap(func, meta=meta)
-                    .compute(scheduler=self._scheduler)
-                )
+                tmp_df = self._dask_applymap(sample, func, meta)
                 self._validate_apply(
                     tmp_df.equals(meta),
                     error_message=("Dask applymap sample does not match pandas applymap sample."),
                 )
             if self._progress_bar:
                 with TQDMDaskProgressBar(desc=self._progress_bar_desc or "Dask Applymap"):
-                    return (
-                        dd.from_pandas(self._obj, npartitions=self._npartitions)
-                        .applymap(func, meta=meta)
-                        .compute(scheduler=self._scheduler)
-                    )
+                    return self._dask_applymap(self._obj, func, meta)
             else:
-                return (
-                    dd.from_pandas(self._obj, npartitions=self._npartitions)
-                    .applymap(func, meta=meta)
-                    .compute(scheduler=self._scheduler)
-                )
+                return self._dask_applymap(self._obj, func, meta)
         except ERRORS_TO_HANDLE:
             # if dask apply doesn't match pandas apply, fallback to pandas
-            if self._progress_bar:
-                tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                applymap_func = self._obj.progress_applymap
-            else:
-                applymap_func = self._obj.applymap
-
-            return applymap_func(func)
+            return self._pandas_applymap(self._obj, func)
 
     def applymap(self, func):
         """
@@ -507,7 +490,7 @@ class DataFrameAccessor(_SwifterObject):
 
         # If parallel processing is forced by the user, then skip the logic and apply dask
         if self._force_parallel:
-            return self._dask_applymap(func)
+            return self._parallel_applymap(func)
 
         sample = self._obj.iloc[self._SAMPLE_INDEX]
         # check if input is string
@@ -532,15 +515,9 @@ class DataFrameAccessor(_SwifterObject):
             # if pandas sample apply takes too long
             # and not performing str processing, use dask
             if (est_apply_duration > self._dask_threshold) and allow_dask_processing:
-                return self._dask_applymap(func)
+                return self._parallel_applymap(func)
             else:  # use pandas
-                if self._progress_bar:
-                    tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
-                    applymap_func = self._obj.progress_applymap
-                else:
-                    applymap_func = self._obj.applymap
-
-                return applymap_func(func)
+                return self._pandas_applymap(self._obj, func)
 
     def groupby(
         self, by=None, axis=0, level=None, as_index=True, sort=True, group_keys=True, observed=False, dropna=True
@@ -696,8 +673,8 @@ class Transformation(_SwifterObject):
         return wrapped
 
     @abstractmethod
-    def _dask_apply(self, func, *args, **kwds):
-        raise NotImplementedError("Transformation class does not implement _dask_apply")
+    def _parallel_apply(self, func, *args, **kwds):
+        raise NotImplementedError("Transformation class does not implement _parallel_apply")
 
     def apply(self, func, *args, **kwds):
         """
@@ -709,7 +686,7 @@ class Transformation(_SwifterObject):
 
         # If parallel processing is forced by the user, then skip the logic and apply dask
         if self._force_parallel:
-            return self._dask_apply(func, *args, **kwds)
+            return self._parallel_apply(func, *args, **kwds)
 
         # estimate time to pandas apply
         wrapped = self._wrapped_apply(func, *args, **kwds)
@@ -720,7 +697,7 @@ class Transformation(_SwifterObject):
         # No `allow_dask_processing` variable here,
         # because we don't know the dtypes of the transformation
         if est_apply_duration > self._dask_threshold:
-            return self._dask_apply(func, *args, **kwds)
+            return self._parallel_apply(func, *args, **kwds)
         else:  # use pandas
             if self._progress_bar and hasattr(self._obj_pd, "progress_apply"):
                 tqdm.pandas(desc=self._progress_bar_desc or "Pandas Apply")
@@ -758,7 +735,7 @@ class Rolling(Transformation):
         self._obj_pd = self._obj_pd.rolling(**kwds)
         self._obj_dd = self._obj_dd.rolling(**{k: v for k, v in kwds.items() if k not in ["on", "closed"]})
 
-    def _dask_apply(self, func, *args, **kwds):
+    def _parallel_apply(self, func, *args, **kwds):
         try:
             # check that the dask rolling apply matches the pandas apply
             with suppress_stdout_stderr_logging():
@@ -821,7 +798,7 @@ class Resampler(Transformation):
             else None
         )
 
-    def _dask_apply(self, func, *args, **kwds):
+    def _parallel_apply(self, func, *args, **kwds):
         try:
             # check that the dask resampler apply matches the pandas apply
             with suppress_stdout_stderr_logging():

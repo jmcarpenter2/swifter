@@ -1,6 +1,8 @@
 FROM python:3.9
+ADD requirements-windows.txt /build/requirements-windows.txt
 ADD requirements-dev.txt /build/requirements-dev.txt
 WORKDIR /build/
+RUN pip install --upgrade pip
 RUN pip install -r requirements-dev.txt
 WORKDIR /mnt/
 ENV PYTHONPATH "${PYTHONPATH}:/mnt"
