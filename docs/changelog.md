@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.3.5 -- 2023-06-12
+* Add secondary fallback for series applies
+* Code refactoring for simplicity
+
 ## Version 1.3.4 -- 2022-08-16
 * Enable indexing after a groupby, e.g. `df.swifter.groupby(by)[key].apply(func)`
 * Improve groupby apply progress bar
