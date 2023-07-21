@@ -23,9 +23,11 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 ```
 $ pip install -U pandas # upgrade pandas
 $ pip install swifter # first time installation
+$ pip install swifter[progress_bar] # first time installation including dependency for rich progress bar in jupyter notebooks
 $ pip install swifter[groupby] # first time installation including dependency for groupby.apply functionality
 
 $ pip install -U swifter # upgrade to latest version if already installed
+$ pip install -U swifter[progress_bar] # upgrade to latest version to include dependency for rich progress bar in jupyter notebooks
 $ pip install -U swifter[groupby] # upgrade to latest version to include dependency for groupby.apply functionality
 ```
 
