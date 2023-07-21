@@ -15,13 +15,10 @@ setup(
         "psutil>=5.6.6",
         "dask[dataframe]>=2.10.0",
         "tqdm>=4.33.0",
-        "ipywidgets>=7.0.0",
-        "cloudpickle>=0.2.2",
-        "parso>0.4.0",
-        "bleach>=3.1.1",
     ],
     extras_require={
-        "groupby": ["ray>=1.0.0"]
+        "groupby": ["ray>=1.0.0"],
+        "progress_bar": ["ipywidgets>=7.0.0"],
     },
     classifiers=[],
 )
