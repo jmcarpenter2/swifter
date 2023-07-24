@@ -1,4 +1,3 @@
-
 import timeit
 import warnings
 
@@ -209,7 +208,11 @@ class _SwifterObject(_SwifterBaseObject):
             if pd.__version__ < "2.0.0":
                 kwds.update({"loffset": loffset})
             else:
-                warnings.warn(DeprecationWarning("`loffset` parameter is deprecated in pandas>=2.0.0, ignoring input argument."), DeprecationWarning, stacklevel=2)
+                warnings.warn(
+                    DeprecationWarning("`loffset` parameter is deprecated in pandas>=2.0.0, ignoring input argument."),
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
 
         return Resampler(
             self._obj,
