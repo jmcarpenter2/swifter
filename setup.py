@@ -18,7 +18,7 @@ setup(
     ],
     extras_require={
         "groupby": ["ray>=1.0.0"],
-        "progress_bar": ["ipywidgets>=7.0.0"],
+        "notebook": ["ipywidgets>=7.0.0"],
     },
     classifiers=[],
 )
