@@ -205,14 +205,7 @@ class _SwifterObject(_SwifterBaseObject):
         if not base:
             kwds.pop("base")
         if loffset is not None:
-            if pd.__version__ < "2.0.0":
-                kwds.update({"loffset": loffset})
-            else:
-                warnings.warn(
-                    DeprecationWarning("`loffset` parameter is deprecated in pandas>=2.0.0, ignoring input argument."),
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
+            kwds.update({"loffset": loffset})
 
         return Resampler(
             self._obj,
