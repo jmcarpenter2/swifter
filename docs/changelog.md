@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.4.0 -- 2023-07-21
+* Significantly reduced core dependencies of swifter library. See https://github.com/jmcarpenter2/swifter/issues/219 for discussion
+  - Big shout out to @PeterJCLaw for starting this discussion and contributions from @xquyvu as well
+* Removed deprecated `loffset` parameter
+  - Thanks to @bnavigator for identifying this bug
+* Updated README to be more readable for darkmode users
+  - Thank you to @MemphisMeng for identifying this gap
+
 ## Version 1.3.5 -- 2023-06-12
 * Add secondary fallback for series applies
 * Code refactoring for simplicity

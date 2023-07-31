@@ -44,7 +44,7 @@ black: build ## Run black, which formats code
 dev-start: ## Primary make command for dev, spins up containers
 	docker-compose -f docker/docker-compose.yml --project-name ${PROJECT} up -d --build
 
-dev-stop: dev-start ## Spins down active containers
+dev-stop: ## Spins down active containers
 	docker-compose -f docker/docker-compose.yml --project-name ${PROJECT} down
 
 sphinx: ## Creates docs using sphinx

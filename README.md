@@ -23,9 +23,11 @@ Check out the [examples notebook](examples/swifter_apply_examples.ipynb), along 
 ```
 $ pip install -U pandas # upgrade pandas
 $ pip install swifter # first time installation
+$ pip install swifter[notebook] # first time installation including dependency for rich progress bar in jupyter notebooks
 $ pip install swifter[groupby] # first time installation including dependency for groupby.apply functionality
 
 $ pip install -U swifter # upgrade to latest version if already installed
+$ pip install -U swifter[notebook] # upgrade to latest version to include dependency for rich progress bar in jupyter notebooks
 $ pip install -U swifter[groupby] # upgrade to latest version to include dependency for groupby.apply functionality
 ```
 
@@ -68,16 +70,15 @@ df['outCol'] = df[['inCol1', 'inCol2', 'inCol3']].swifter.apply(my_func,
 ```
 
 ## Vectorizes your function, when possible
-![Alt text](/assets/vectorizes_when_possible_real.png?raw=true)
-![Alt text](/assets/vectorizes_when_possible_log10.png?raw=true)
+![Alt text](/assets/vectorizes_when_possible_compatible.png?raw=true)
 
 ## When vectorization is not possible, automatically decides which is faster: to use dask parallel processing or a simple pandas apply
-![Alt text](/assets/multiprocessing_v_single_real.png?raw=true)
-![Alt text](/assets/multiprocessing_v_single_log10.png?raw=true)
+![Alt text](/assets/multiprocessing_vs_single_compatible.png?raw=true)
 
 ## Highly performant, even for groupby applies
-![Alt text](/assets/groupby_parallel_v_single_real.png?raw=true)
-![Alt text](/assets/groupby_parallel_v_single_log10.png?raw=true)
+![Alt text](/assets/groupby_parallel_vs_single_compatible.png?raw=true)
+
+See the [speed benchmark notebook](examples/swifter_speed_comparison.ipynb) for source of the above performance plots.
 
 ## Notes
 1. The function is documented in the .py file. In Jupyter Notebooks, you can see the docs by pressing Shift+Tab(x3). Also, check out the complete documentation [here](docs/documentation.md) along with the [changelog](docs/changelog.md).

@@ -196,7 +196,6 @@ class _SwifterObject(_SwifterBaseObject):
             "label": label,
             "convention": convention,
             "kind": kind,
-            "loffset": loffset,
             "base": base,
             "on": on,
             "level": level,
@@ -205,6 +204,8 @@ class _SwifterObject(_SwifterBaseObject):
         }
         if not base:
             kwds.pop("base")
+        if loffset is not None:
+            kwds.update({"loffset": loffset})
 
         return Resampler(
             self._obj,
